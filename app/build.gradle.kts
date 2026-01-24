@@ -70,4 +70,6 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.2.0")
     implementation("androidx.navigation:navigation-compose:2.9.6")
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 }

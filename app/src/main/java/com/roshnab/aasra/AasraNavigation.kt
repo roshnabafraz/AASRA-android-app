@@ -16,10 +16,7 @@ fun AasraNavigation() {
         composable("auth") {
             AuthScreen(
                 onAuthSuccess = {
-                    // Navigate to Home when login succeeds
                     navController.navigate("home") {
-                        // This clears the "Back Stack" so the user
-                        // cannot go back to the Login screen by pressing Back.
                         popUpTo("auth") { inclusive = true }
                     }
                 }
