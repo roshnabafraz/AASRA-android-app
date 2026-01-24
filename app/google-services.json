@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1048876079888",
+    "project_id": "aasra-fyp",
+    "storage_bucket": "aasra-fyp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1048876079888:android:590649c9abad5509b7e395",
+        "android_client_info": {
+          "package_name": "com.roshnab.aasra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCULn51CdxikkTRYj42I7ONS1AjzYPU3Zc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
