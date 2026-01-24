@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,10 +61,16 @@ class AuthViewModel : ViewModel() {
     }
 
     fun signInWithGoogle(idToken: String) {
-        // Placeholder: You will implement CredentialManager here later
         viewModelScope.launch {
             _authState.value = AuthState.Loading
-            // Firebase Google Auth Logic would go here
+            try {
+                // Exchange the Google ID token for a Firebase Credential
+                val credential = GoogleAuthProvider.getCredential(idToken, null)
+                val result = auth.signInWithCredential(credential).await()
+                _authState.value = AuthState.Success(result.user)
+            } catch (e: Exception) {
+                _authState.value = AuthState.Error(e.message ?: "Google Sign-In Failed")
+            }
         }
     }
 

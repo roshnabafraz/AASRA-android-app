@@ -1,9 +1,9 @@
 package com.roshnab.aasra.auth
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,20 +16,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lint.kotlin.metadata.Visibility
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import com.roshnab.aasra.R
-import com.roshnab.aasra.auth.AuthState
-import com.roshnab.aasra.auth.AuthViewModel
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -40,6 +45,50 @@ fun AuthScreen(
     val authState by viewModel.authState.collectAsState()
     val context = LocalContext.current
     var isLoginMode by remember { mutableStateOf(true) }
+
+    // 1. Initialize Credential Manager & Scope
+    val coroutineScope = rememberCoroutineScope()
+    val credentialManager = remember { CredentialManager.create(context) }
+
+    // 2. Define the Google Sign-In Logic (Reusable)
+    val onGoogleSignInClick: () -> Unit = {
+        coroutineScope.launch {
+            try {
+                val webClientId = "1048876079888-p249t5h202c6ul2574i4r2k178vv9t8l.apps.googleusercontent.com"
+
+                val googleIdOption = GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(false)
+                    .setServerClientId(webClientId)
+                    .setAutoSelectEnabled(true)
+                    .build()
+
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleIdOption)
+                    .build()
+
+                val result = credentialManager.getCredential(
+                    request = request,
+                    context = context
+                )
+
+                when (val credential = result.credential) {
+                    is CustomCredential -> {
+                        if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                            val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                            val idToken = googleIdTokenCredential.idToken
+                            viewModel.signInWithGoogle(idToken)
+                        }
+                    }
+                    else -> {
+                        Log.e("Auth", "Unknown credential type")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("Auth", "Google Sign In Failed", e)
+                Toast.makeText(context, "Google Sign In Failed: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // State Listener
     LaunchedEffect(authState) {
@@ -68,18 +117,29 @@ fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // App Logo / Title
+            Image(
+                painter = painterResource(id = R.drawable.aasra_logo),
+                contentDescription = "AASRA Logo",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(180.dp)
+                    .padding(bottom = 16.dp)
+                    .clip(RoundedCornerShape(24.dp))
+            )
+
             Text(
                 text = "AASRA",
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.ExtraBold
             )
-            Text(
-                text = "Disaster Relief & Management",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                modifier = Modifier.padding(bottom = 32.dp)
-            )
+
+//            Text(
+//                text = "AI powered Aid System For Rapid Assistance",
+//                style = MaterialTheme.typography.labelMedium,
+//                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+//                modifier = Modifier.padding(bottom = 32.dp)
+//            )
 
             // Smooth Toggle between Login and Sign Up Screens
             AnimatedContent(targetState = isLoginMode, label = "AuthToggle") { isLogin ->
@@ -87,12 +147,14 @@ fun AuthScreen(
                     LoginContent(
                         viewModel = viewModel,
                         isLoading = authState is AuthState.Loading,
+                        onGoogleSignIn = onGoogleSignInClick,
                         onToggleMode = { isLoginMode = false }
                     )
                 } else {
                     SignUpContent(
                         viewModel = viewModel,
                         isLoading = authState is AuthState.Loading,
+                        onGoogleSignIn = onGoogleSignInClick,
                         onToggleMode = { isLoginMode = true }
                     )
                 }
@@ -106,6 +168,7 @@ fun AuthScreen(
 fun LoginContent(
     viewModel: AuthViewModel,
     isLoading: Boolean,
+    onGoogleSignIn: () -> Unit,
     onToggleMode: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
@@ -146,7 +209,7 @@ fun LoginContent(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-        GoogleButton(onClick = { /* TODO: Trigger Google Sign In */ })
+        GoogleButton(onClick = onGoogleSignIn)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -167,6 +230,7 @@ fun LoginContent(
 fun SignUpContent(
     viewModel: AuthViewModel,
     isLoading: Boolean,
+    onGoogleSignIn: () -> Unit,
     onToggleMode: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
@@ -222,7 +286,7 @@ fun SignUpContent(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-        GoogleButton(onClick = { /* TODO: Trigger Google Sign In */ })
+        GoogleButton(onClick = onGoogleSignIn)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -266,7 +330,7 @@ fun AasraTextField(
             if (isPassword) {
                 IconButton(onClick = onToggleVisibility) {
                     Icon(
-                        imageVector = if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        imageVector = if (isVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                         contentDescription = "Toggle Password"
                     )
                 }
@@ -305,9 +369,13 @@ fun GoogleButton(onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
-        // Uncomment the Icon below when you have a drawable
-        // Icon(painter = painterResource(id = R.drawable.ic_google), contentDescription = null, tint = Color.Unspecified)
-        // Spacer(modifier = Modifier.width(8.dp))
+        Image(
+            painter = painterResource(id = R.drawable.ic_google),
+            contentDescription = "Google Sign In",
+            modifier = Modifier.size(24.dp) // Explicitly set the size to 24dp
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "Continue with Google",
             color = MaterialTheme.colorScheme.onBackground
