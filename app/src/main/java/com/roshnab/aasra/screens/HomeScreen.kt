@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.roshnab.aasra.components.AasraBottomBar
+import com.roshnab.aasra.components.AasraTopBar // Ensure this is imported
 import com.roshnab.aasra.components.BottomNavScreen
 import com.roshnab.aasra.data.FloodRepository
 import kotlinx.coroutines.launch
@@ -35,7 +36,8 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 @Composable
 fun HomeScreen(
     onReportClick: (Double, Double) -> Unit,
-    onDonationClick: () -> Unit
+    onDonationClick: () -> Unit,
+    onProfileClick: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -66,6 +68,7 @@ fun HomeScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
 
+        // LAYER 1: MAP
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
@@ -106,6 +109,13 @@ fun HomeScreen(
             }
         )
 
+        // LAYER 2: TOP BAR
+        AasraTopBar(
+            onProfileClick = onProfileClick,
+            onNotificationClick = { /* Future: Notification Screen */ }
+        )
+
+        // LAYER 3: LOCATE ME BUTTON (Moved down slightly)
         SmallFloatingActionButton(
             onClick = {
                 val location = myLocationOverlay?.myLocation
@@ -118,13 +128,14 @@ fun HomeScreen(
             },
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 48.dp, end = 16.dp),
+                .padding(top = 100.dp, end = 16.dp), // Increased padding to sit under TopBar
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.primary
         ) {
             Icon(Icons.Filled.MyLocation, contentDescription = "Locate Me")
         }
 
+        // LAYER 4: BOTTOM UI
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -155,10 +166,16 @@ fun HomeScreen(
             AasraBottomBar(
                 currentScreen = currentScreen,
                 onScreenSelected = { screen ->
-                    if (screen == BottomNavScreen.Donations) {
-                        onDonationClick()
-                    } else {
-                        currentScreen = screen
+                    when (screen) {
+                        BottomNavScreen.Donations -> {
+                            onDonationClick()
+                        }
+                        BottomNavScreen.Profile -> {
+                            onProfileClick()
+                        }
+                        else -> {
+                            currentScreen = screen
+                        }
                     }
                 }
             )
