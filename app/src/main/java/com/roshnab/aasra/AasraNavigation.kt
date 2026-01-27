@@ -70,6 +70,8 @@ fun AasraNavigation(
                     navController.navigate("location_picker")
                 },
                 onEditProfileClick = { navController.navigate("edit_profile") },
+                isDarkTheme = isDarkTheme,
+                onThemeChanged = onThemeChanged,
                 viewModel = profileViewModel
             )
         }

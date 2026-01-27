@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -30,8 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,6 +43,8 @@ fun ProfileScreen(
     onLogoutClick: () -> Unit,
     onAddLocationClick: () -> Unit,
     onEditProfileClick: () -> Unit,
+    isDarkTheme: Boolean,                  // <--- 1. Receive Real State
+    onThemeChanged: (Boolean) -> Unit,     // <--- 2. Receive Real Action
     viewModel: ProfileViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -78,8 +77,6 @@ fun ProfileScreen(
         }
     }
 
-    var isDarkTheme by remember { mutableStateOf(false) }
-    var areNotificationsEnabled by remember { mutableStateOf(true) }
     var currentLanguage by remember { mutableStateOf("English") }
 
     Scaffold(
@@ -190,8 +187,25 @@ fun ProfileScreen(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SectionTitle("App Preferences")
-                ToggleItem(Icons.Filled.Notifications, "Flood Alerts", areNotificationsEnabled) { areNotificationsEnabled = it }
-                ToggleItem(Icons.Filled.DarkMode, "Dark Mode", isDarkTheme) { isDarkTheme = it }
+
+                // 1. Flood Alerts (Using Real ViewModel Data)
+                ToggleItem(
+                    icon = Icons.Filled.Notifications,
+                    title = "Flood Alerts",
+                    isChecked = state.areNotificationsEnabled
+                ) { isChecked ->
+                    viewModel.updateNotificationPreference(isChecked)
+                }
+
+                // 2. Dark Mode (Using Real App Theme Data)
+                ToggleItem(
+                    icon = Icons.Filled.DarkMode,
+                    title = "Dark Mode",
+                    isChecked = isDarkTheme // <--- USES PARAMETER
+                ) { isChecked ->
+                    onThemeChanged(isChecked) // <--- TRIGGERS MAIN ACTIVITY
+                }
+
                 SettingsItem(Icons.Filled.Language, "Language", currentLanguage) {
                     currentLanguage = if (currentLanguage == "English") "Urdu" else "English"
                 }
@@ -199,6 +213,7 @@ fun ProfileScreen(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SectionTitle("Account & Support")
+                // EDIT PROFILE CLICK
                 SettingsItem(Icons.Filled.Edit, "Edit Profile", "Change name or password") {
                     onEditProfileClick()
                 }
@@ -214,6 +229,7 @@ fun ProfileScreen(
         }
     }
 
+    // --- WARNING DIALOGS ---
 
     if (contactToDelete != null) {
         AlertDialog(
@@ -227,9 +243,7 @@ fun ProfileScreen(
                         contactToDelete = null
                         Toast.makeText(context, "Contact Removed", Toast.LENGTH_SHORT).show()
                     }
-                ) {
-                    Text("Remove", color = MaterialTheme.colorScheme.error)
-                }
+                ) { Text("Remove", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 TextButton(onClick = { contactToDelete = null }) { Text("Cancel") }
@@ -249,9 +263,7 @@ fun ProfileScreen(
                         locationToDelete = null
                         Toast.makeText(context, "Location Deleted", Toast.LENGTH_SHORT).show()
                     }
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
+                ) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 TextButton(onClick = { locationToDelete = null }) { Text("Cancel") }
@@ -260,124 +272,7 @@ fun ProfileScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EditProfileScreen(
-    onBackClick: () -> Unit,
-    viewModel: ProfileViewModel
-) {
-    val context = LocalContext.current
-    val state = viewModel.uiState
-
-    var newName by remember { mutableStateOf(state.name) }
-    var newPassword by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-
-    var isSaving by remember { mutableStateOf(false) }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Edit Profile") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Filled.ArrowBack, "Back")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            Text("Personal Information", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-
-            OutlinedTextField(
-                value = newName,
-                onValueChange = { newName = it },
-                label = { Text("Full Name") },
-                leadingIcon = { Icon(Icons.Filled.Person, null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Button(
-                onClick = {
-                    if (newName.isNotBlank()) {
-                        isSaving = true
-                        viewModel.updateUserName(newName) { success ->
-                            isSaving = false
-                            if (success) Toast.makeText(context, "Name Updated!", Toast.LENGTH_SHORT).show()
-                            else Toast.makeText(context, "Update Failed", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        Toast.makeText(context, "Name cannot be empty", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.align(Alignment.End),
-                enabled = !isSaving
-            ) {
-                Text(if (isSaving) "Saving..." else "Update Name")
-            }
-
-            Divider()
-
-            // --- SECTION 2: SECURITY ---
-            Text("Security", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-
-            OutlinedTextField(
-                value = newPassword,
-                onValueChange = { newPassword = it },
-                label = { Text("New Password") },
-                leadingIcon = { Icon(Icons.Filled.Lock, null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-            )
-
-            OutlinedTextField(
-                value = confirmPassword,
-                onValueChange = { confirmPassword = it },
-                label = { Text("Confirm New Password") },
-                leadingIcon = { Icon(Icons.Filled.Lock, null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-            )
-
-            Button(
-                onClick = {
-                    if (newPassword.length >= 6 && newPassword == confirmPassword) {
-                        isSaving = true
-                        viewModel.updateUserPassword(newPassword) { success, error ->
-                            isSaving = false
-                            if (success) {
-                                Toast.makeText(context, "Password Changed!", Toast.LENGTH_SHORT).show()
-                                newPassword = ""
-                                confirmPassword = ""
-                            } else {
-                                Toast.makeText(context, error ?: "Failed", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    } else {
-                        Toast.makeText(context, "Passwords must match & be 6+ chars", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.align(Alignment.End),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                enabled = !isSaving
-            ) {
-                Text("Change Password")
-            }
-        }
-    }
-}
+// --- HELPER FUNCTIONS ---
 
 @Composable
 fun ProfileHeaderSection(name: String, email: String, totalDonated: Int) {

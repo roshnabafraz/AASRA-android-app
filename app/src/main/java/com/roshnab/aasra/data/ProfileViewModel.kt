@@ -9,7 +9,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -19,7 +21,8 @@ data class ProfileUiState(
     val email: String = "",
     val totalDonated: Int = 0,
     val emergencyContacts: List<EmergencyContact> = emptyList(),
-    val safeLocations: List<SafeLocation> = emptyList()
+    val safeLocations: List<SafeLocation> = emptyList(),
+    val areNotificationsEnabled: Boolean = true
 )
 
 data class EmergencyContact(
@@ -55,6 +58,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 val email = user.email ?: ""
                 var contacts = emptyList<EmergencyContact>()
                 var locations = emptyList<SafeLocation>()
+                var notifPref = true
 
                 try {
                     val snapshot = db.collection("users").document(user.uid).get().await()
@@ -76,6 +80,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                                 longitude = (it["longitude"] as? Double) ?: 0.0
                             )
                         } ?: emptyList()
+
+                        notifPref = snapshot.getBoolean("notificationsEnabled") ?: true
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -92,7 +98,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     email = email,
                     totalDonated = userTotal,
                     emergencyContacts = contacts,
-                    safeLocations = locations
+                    safeLocations = locations,
+                    areNotificationsEnabled = notifPref
                 )
             } else {
                 uiState = uiState.copy(isLoading = false)
@@ -116,7 +123,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                         val name = if (nameIndex >= 0) cursor.getString(nameIndex) ?: "Unknown" else "Unknown"
                         var number = if (numberIndex >= 0) cursor.getString(numberIndex) ?: "" else ""
 
-                        // Clean number
                         number = number.replace(" ", "").replace("-", "")
 
                         if (number.isNotBlank()) {
@@ -142,7 +148,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             .update("emergencyContacts", currentList)
             .addOnFailureListener {
                 val data = hashMapOf("emergencyContacts" to currentList)
-                db.collection("users").document(user.uid).set(data, com.google.firebase.firestore.SetOptions.merge())
+                db.collection("users").document(user.uid).set(data, SetOptions.merge())
             }
     }
 
@@ -166,7 +172,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             .update("safeLocations", currentList)
             .addOnFailureListener {
                 val data = hashMapOf("safeLocations" to currentList)
-                db.collection("users").document(user.uid).set(data, com.google.firebase.firestore.SetOptions.merge())
+                db.collection("users").document(user.uid).set(data, SetOptions.merge())
             }
     }
 
@@ -183,7 +189,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             try {
-                val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                val profileUpdates = UserProfileChangeRequest.Builder()
                     .setDisplayName(newName)
                     .build()
                 user.updateProfile(profileUpdates).await()
@@ -211,6 +217,17 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 } else {
                     onResult(false, task.exception?.message)
                 }
+            }
+    }
+
+    fun updateNotificationPreference(isEnabled: Boolean) {
+        val user = auth.currentUser ?: return
+
+        uiState = uiState.copy(areNotificationsEnabled = isEnabled)
+
+        db.collection("users").document(user.uid)
+            .update("notificationsEnabled", isEnabled)
+            .addOnFailureListener {
             }
     }
 }
