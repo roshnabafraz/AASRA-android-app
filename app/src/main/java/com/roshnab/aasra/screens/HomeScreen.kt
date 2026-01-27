@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.roshnab.aasra.components.AasraBottomBar
-import com.roshnab.aasra.components.AasraTopBar // Ensure this is imported
+import com.roshnab.aasra.components.AasraTopBar
 import com.roshnab.aasra.components.BottomNavScreen
 import com.roshnab.aasra.data.FloodRepository
 import kotlinx.coroutines.launch
@@ -73,8 +73,16 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 MapView(ctx).apply {
-                    setTileSource(TileSourceFactory.WIKIMEDIA)
+                    setTileSource(TileSourceFactory.MAPNIK)
                     setMultiTouchControls(true)
+
+                    setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+
+                    isHorizontalMapRepetitionEnabled = false
+                    isVerticalMapRepetitionEnabled = false
+
+                    setScrollableAreaLimitDouble(org.osmdroid.util.BoundingBox(85.0, 180.0, -85.0, -180.0))
+
                     mapController = this.controller
                 }
             },
@@ -109,13 +117,11 @@ fun HomeScreen(
             }
         )
 
-        // LAYER 2: TOP BAR
         AasraTopBar(
             onProfileClick = onProfileClick,
             onNotificationClick = { /* Future: Notification Screen */ }
         )
 
-        // LAYER 3: LOCATE ME BUTTON (Moved down slightly)
         SmallFloatingActionButton(
             onClick = {
                 val location = myLocationOverlay?.myLocation
@@ -128,14 +134,13 @@ fun HomeScreen(
             },
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 100.dp, end = 16.dp), // Increased padding to sit under TopBar
+                .padding(top = 100.dp, end = 16.dp),
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.primary
         ) {
             Icon(Icons.Filled.MyLocation, contentDescription = "Locate Me")
         }
 
-        // LAYER 4: BOTTOM UI
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
