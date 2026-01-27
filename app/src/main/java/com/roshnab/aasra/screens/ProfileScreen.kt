@@ -75,128 +75,134 @@ fun ProfileScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = { Text("Profile & Settings", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Filled.ArrowBack, "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-            )
+            Column {
+                TopAppBar(
+                    title = { Text("Profile & Settings", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.Filled.ArrowBack, "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                )
+                if (state.isLoading) {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                }
+            }
         }
     ) { padding ->
-        if (state.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            ProfileHeaderSection(
+                name = if (state.name.isEmpty()) "Loading..." else state.name,
+                email = if (state.email.isEmpty()) "..." else state.email,
+                totalDonated = state.totalDonated
+            )
 
-                ProfileHeaderSection(state.name, state.email, state.totalDonated)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionTitle("Safety & Emergency")
 
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionTitle("Safety & Emergency")
+                SettingsItem(
+                    icon = Icons.Filled.PersonAdd,
+                    title = "Add Emergency Contact",
+                    subtitle = "Select from phone book"
+                ) {
+                    permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                }
 
-                    SettingsItem(
-                        icon = Icons.Filled.PersonAdd,
-                        title = "Add Emergency Contact",
-                        subtitle = "Select from phone book"
+                if (state.emergencyContacts.isNotEmpty()) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
-                    }
-
-                    if (state.emergencyContacts.isNotEmpty()) {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                state.emergencyContacts.forEach { contact ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Column {
-                                            Text(contact.name, fontWeight = FontWeight.Bold)
-                                            Text(contact.number, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                                        }
-                                        IconButton(onClick = { viewModel.removeContact(contact) }) {
-                                            Icon(Icons.Outlined.Delete, "Remove", tint = MaterialTheme.colorScheme.error)
-                                        }
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            state.emergencyContacts.forEach { contact ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(contact.name, fontWeight = FontWeight.Bold)
+                                        Text(contact.number, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                                     }
-                                    if (contact != state.emergencyContacts.last()) {
-                                        Divider(color = Color.LightGray.copy(alpha = 0.3f))
+                                    IconButton(onClick = { viewModel.removeContact(contact) }) {
+                                        Icon(Icons.Outlined.Delete, "Remove", tint = MaterialTheme.colorScheme.error)
                                     }
+                                }
+                                if (contact != state.emergencyContacts.last()) {
+                                    Divider(color = Color.LightGray.copy(alpha = 0.3f))
                                 }
                             }
                         }
                     }
+                }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        SectionTitle("Safe Locations")
-                        TextButton(onClick = onAddLocationClick) {
-                            Text("+ Add New", color = MaterialTheme.colorScheme.primary)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SectionTitle("Safe Locations")
+                    TextButton(onClick = onAddLocationClick) {
+                        Text("+ Add New", color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
+                if (state.safeLocations.isEmpty()) {
+                    val msg = if (state.isLoading) "Loading locations..." else "No locations saved yet."
+                    Text(msg, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 16.dp))
+                } else {
+                    state.safeLocations.forEach { loc ->
+                        SettingsItem(
+                            icon = Icons.Filled.LocationOn,
+                            title = loc.name,
+                            subtitle = "${String.format("%.4f", loc.latitude)}, ${String.format("%.4f", loc.longitude)}"
+                        ) {
+                            viewModel.removeSafeLocation(loc)
+                            Toast.makeText(context, "Location Removed", Toast.LENGTH_SHORT).show()
                         }
                     }
-
-                    if (state.safeLocations.isEmpty()) {
-                        Text("No locations saved yet.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 16.dp))
-                    } else {
-                        state.safeLocations.forEach { loc ->
-                            SettingsItem(
-                                icon = Icons.Filled.LocationOn,
-                                title = loc.name,
-                                subtitle = "${String.format("%.4f", loc.latitude)}, ${String.format("%.4f", loc.longitude)}"
-                            ) {
-                                viewModel.removeSafeLocation(loc)
-                                Toast.makeText(context, "Location Removed", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
                 }
+            }
 
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionTitle("App Preferences")
-                    ToggleItem(Icons.Filled.Notifications, "Flood Alerts", areNotificationsEnabled) { areNotificationsEnabled = it }
-                    ToggleItem(Icons.Filled.DarkMode, "Dark Mode", isDarkTheme) { isDarkTheme = it }
-                    SettingsItem(Icons.Filled.Language, "Language", currentLanguage) {
-                        currentLanguage = if (currentLanguage == "English") "Urdu" else "English"
-                    }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionTitle("App Preferences")
+                ToggleItem(Icons.Filled.Notifications, "Flood Alerts", areNotificationsEnabled) { areNotificationsEnabled = it }
+                ToggleItem(Icons.Filled.DarkMode, "Dark Mode", isDarkTheme) { isDarkTheme = it }
+                SettingsItem(Icons.Filled.Language, "Language", currentLanguage) {
+                    currentLanguage = if (currentLanguage == "English") "Urdu" else "English"
                 }
+            }
 
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionTitle("Account & Support")
-                    SettingsItem(Icons.Filled.Edit, "Edit Profile", "Change name or password") { }
-                    SettingsItem(Icons.Outlined.Feedback, "Send Feedback", "Help us improve AASRA") {
-                        sendFeedbackEmail(context)
-                    }
-                    LogoutItem(onLogoutClick)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionTitle("Account & Support")
+                SettingsItem(Icons.Filled.Edit, "Edit Profile", "Change name or password") { }
+                SettingsItem(Icons.Outlined.Feedback, "Send Feedback", "Help us improve AASRA") {
+                    sendFeedbackEmail(context)
                 }
+                LogoutItem(onLogoutClick)
+            }
 
-                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
-                    Text("AASRA v1.0.0", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
+                Text("AASRA v1.0.0", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
-
 
 @Composable
 fun ProfileHeaderSection(name: String, email: String, totalDonated: Int) {
