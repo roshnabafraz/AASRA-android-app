@@ -43,8 +43,9 @@ fun ProfileScreen(
     onLogoutClick: () -> Unit,
     onAddLocationClick: () -> Unit,
     onEditProfileClick: () -> Unit,
-    isDarkTheme: Boolean,                  // <--- 1. Receive Real State
-    onThemeChanged: (Boolean) -> Unit,     // <--- 2. Receive Real Action
+    isDarkTheme: Boolean,
+    onThemeChanged: (Boolean) -> Unit,
+    onSupportClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -213,10 +214,15 @@ fun ProfileScreen(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SectionTitle("Account & Support")
-                // EDIT PROFILE CLICK
+
                 SettingsItem(Icons.Filled.Edit, "Edit Profile", "Change name or password") {
                     onEditProfileClick()
                 }
+
+                SettingsItem(Icons.Filled.SupportAgent, "Help & Support", "Contact our team") {
+                    onSupportClick()
+                }
+
                 SettingsItem(Icons.Outlined.Feedback, "Send Feedback", "Help us improve AASRA") {
                     sendFeedbackEmail(context)
                 }

@@ -12,6 +12,7 @@ import com.roshnab.aasra.auth.AuthScreen
 import com.roshnab.aasra.data.ProfileViewModel
 import com.roshnab.aasra.screens.DonationScreen
 import com.roshnab.aasra.screens.EditProfileScreen
+import com.roshnab.aasra.screens.HelpSupportScreen
 import com.roshnab.aasra.screens.HomeScreen
 import com.roshnab.aasra.screens.LocationPickerScreen
 import com.roshnab.aasra.screens.ProfileScreen
@@ -72,8 +73,13 @@ fun AasraNavigation(
                 onEditProfileClick = { navController.navigate("edit_profile") },
                 isDarkTheme = isDarkTheme,
                 onThemeChanged = onThemeChanged,
+                onSupportClick = { navController.navigate("help_support") }, // <--- Add this
                 viewModel = profileViewModel
             )
+        }
+
+        composable("help_support") {
+            HelpSupportScreen(onBackClick = { navController.popBackStack() })
         }
 
         composable("edit_profile") {
