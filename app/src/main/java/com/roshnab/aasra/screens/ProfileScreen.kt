@@ -8,7 +8,6 @@ import android.provider.ContactsContract
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,6 +39,7 @@ import com.roshnab.aasra.data.ProfileViewModel
 fun ProfileScreen(
     onBackClick: () -> Unit,
     onLogoutClick: () -> Unit,
+    onAddLocationClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -144,7 +144,31 @@ fun ProfileScreen(
                         }
                     }
 
-                    SettingsItem(Icons.Filled.Home, "Safe Locations", "Set Home & Work (Coming Next)") { }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SectionTitle("Safe Locations")
+                        TextButton(onClick = onAddLocationClick) {
+                            Text("+ Add New", color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+
+                    if (state.safeLocations.isEmpty()) {
+                        Text("No locations saved yet.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 16.dp))
+                    } else {
+                        state.safeLocations.forEach { loc ->
+                            SettingsItem(
+                                icon = Icons.Filled.LocationOn,
+                                title = loc.name,
+                                subtitle = "${String.format("%.4f", loc.latitude)}, ${String.format("%.4f", loc.longitude)}"
+                            ) {
+                                viewModel.removeSafeLocation(loc)
+                                Toast.makeText(context, "Location Removed", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -172,6 +196,7 @@ fun ProfileScreen(
         }
     }
 }
+
 
 @Composable
 fun ProfileHeaderSection(name: String, email: String, totalDonated: Int) {

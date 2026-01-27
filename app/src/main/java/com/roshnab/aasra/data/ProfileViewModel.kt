@@ -18,12 +18,20 @@ data class ProfileUiState(
     val name: String = "",
     val email: String = "",
     val totalDonated: Int = 0,
-    val emergencyContacts: List<EmergencyContact> = emptyList()
+    val emergencyContacts: List<EmergencyContact> = emptyList(),
+    val safeLocations: List<SafeLocation> = emptyList()
 )
 
 data class EmergencyContact(
     val name: String = "",
     val number: String = ""
+)
+
+data class SafeLocation(
+    val id: String = "",
+    val name: String = "",
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0
 )
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
@@ -46,6 +54,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 var name = user.displayName ?: "AASRA User"
                 val email = user.email ?: ""
                 var contacts = emptyList<EmergencyContact>()
+                var locations = emptyList<SafeLocation>()
 
                 try {
                     val snapshot = db.collection("users").document(user.uid).get().await()
@@ -56,6 +65,16 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                         val fsContacts = snapshot.get("emergencyContacts") as? List<Map<String, String>>
                         contacts = fsContacts?.map {
                             EmergencyContact(it["name"] ?: "", it["number"] ?: "")
+                        } ?: emptyList()
+
+                        val fsLocs = snapshot.get("safeLocations") as? List<Map<String, Any>>
+                        locations = fsLocs?.map {
+                            SafeLocation(
+                                id = it["id"] as? String ?: "",
+                                name = it["name"] as? String ?: "",
+                                latitude = (it["latitude"] as? Double) ?: 0.0,
+                                longitude = (it["longitude"] as? Double) ?: 0.0
+                            )
                         } ?: emptyList()
                     }
                 } catch (e: Exception) {
@@ -72,32 +91,41 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     name = name,
                     email = email,
                     totalDonated = userTotal,
-                    emergencyContacts = contacts
+                    emergencyContacts = contacts,
+                    safeLocations = locations
                 )
+            } else {
+                uiState = uiState.copy(isLoading = false)
             }
         }
     }
 
     fun addContactFromUri(contactUri: Uri) {
         viewModelScope.launch {
-            // 1. Resolve Name and Number from the Phone's Content Provider
-            val projection = arrayOf(
-                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-                ContactsContract.CommonDataKinds.Phone.NUMBER
-            )
+            try {
+                val projection = arrayOf(
+                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                    ContactsContract.CommonDataKinds.Phone.NUMBER
+                )
 
-            context.contentResolver.query(contactUri, projection, null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-                    val numberIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                context.contentResolver.query(contactUri, projection, null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                        val numberIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
 
-                    val name = if (nameIndex >= 0) cursor.getString(nameIndex) else "Unknown"
-                    val number = if (numberIndex >= 0) cursor.getString(numberIndex) else ""
+                        val name = if (nameIndex >= 0) cursor.getString(nameIndex) ?: "Unknown" else "Unknown"
+                        var number = if (numberIndex >= 0) cursor.getString(numberIndex) ?: "" else ""
 
-                    if (number.isNotBlank()) {
-                        saveContactToFirestore(EmergencyContact(name, number))
+                        // Clean number
+                        number = number.replace(" ", "").replace("-", "")
+
+                        if (number.isNotBlank()) {
+                            saveContactToFirestore(EmergencyContact(name, number))
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
@@ -105,17 +133,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private fun saveContactToFirestore(contact: EmergencyContact) {
         val user = auth.currentUser ?: return
         val currentList = uiState.emergencyContacts.toMutableList()
-
         if (currentList.any { it.number == contact.number }) return
 
         currentList.add(contact)
-
         uiState = uiState.copy(emergencyContacts = currentList)
 
         db.collection("users").document(user.uid)
             .update("emergencyContacts", currentList)
             .addOnFailureListener {
-                // If the document doesn't exist yet, set it
                 val data = hashMapOf("emergencyContacts" to currentList)
                 db.collection("users").document(user.uid).set(data, com.google.firebase.firestore.SetOptions.merge())
             }
@@ -125,10 +150,31 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         val user = auth.currentUser ?: return
         val currentList = uiState.emergencyContacts.toMutableList()
         currentList.remove(contact)
-
         uiState = uiState.copy(emergencyContacts = currentList)
+        db.collection("users").document(user.uid).update("emergencyContacts", currentList)
+    }
+
+    fun addSafeLocation(name: String, lat: Double, lng: Double) {
+        val user = auth.currentUser ?: return
+        val newLoc = SafeLocation(System.currentTimeMillis().toString(), name, lat, lng)
+        val currentList = uiState.safeLocations.toMutableList()
+
+        currentList.add(newLoc)
+        uiState = uiState.copy(safeLocations = currentList)
 
         db.collection("users").document(user.uid)
-            .update("emergencyContacts", currentList)
+            .update("safeLocations", currentList)
+            .addOnFailureListener {
+                val data = hashMapOf("safeLocations" to currentList)
+                db.collection("users").document(user.uid).set(data, com.google.firebase.firestore.SetOptions.merge())
+            }
+    }
+
+    fun removeSafeLocation(location: SafeLocation) {
+        val user = auth.currentUser ?: return
+        val currentList = uiState.safeLocations.toMutableList()
+        currentList.remove(location)
+        uiState = uiState.copy(safeLocations = currentList)
+        db.collection("users").document(user.uid).update("safeLocations", currentList)
     }
 }

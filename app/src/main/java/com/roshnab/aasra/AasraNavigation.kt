@@ -6,21 +6,30 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.roshnab.aasra.screens.DonationScreen
-import com.roshnab.aasra.screens.HomeScreen
-import com.roshnab.aasra.screens.ProfileScreen
-import com.roshnab.aasra.screens.ReportScreen
+import androidx.lifecycle.viewmodel.compose.viewModel // Import for viewModel()
 import com.google.firebase.auth.FirebaseAuth
 import com.roshnab.aasra.auth.AuthScreen
+import com.roshnab.aasra.data.ProfileViewModel
+import com.roshnab.aasra.screens.DonationScreen
+import com.roshnab.aasra.screens.HomeScreen
+import com.roshnab.aasra.screens.LocationPickerScreen
+import com.roshnab.aasra.screens.ProfileScreen
+import com.roshnab.aasra.screens.ReportScreen
 import com.roshnab.aasra.screens.SplashScreen
 
 @Composable
-fun AasraNavigation() {
+fun AasraNavigation(
+    isDarkTheme: Boolean = false,
+    onThemeChanged: (Boolean) -> Unit = {}
+) {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "splash") {
 
-        // 1. AUTH SCREEN
+        composable("splash") {
+            SplashScreen(navController = navController)
+        }
+
         composable("auth") {
             AuthScreen(onAuthSuccess = {
                 navController.navigate("home") {
@@ -29,11 +38,6 @@ fun AasraNavigation() {
             })
         }
 
-        composable("splash") {
-            SplashScreen(navController = navController)
-        }
-
-        // 2. HOME SCREEN
         composable("home") {
             HomeScreen(
                 onReportClick = { lat, lng ->
@@ -48,32 +52,40 @@ fun AasraNavigation() {
             )
         }
 
-        // 3. DONATION SCREEN
         composable("donation") {
             DonationScreen(onBackClick = { navController.popBackStack() })
         }
 
-        // 4. PROFILE SCREEN (Fixed Logout Logic)
         composable("profile") {
+            val profileViewModel: ProfileViewModel = viewModel()
+
             ProfileScreen(
                 onBackClick = { navController.popBackStack() },
                 onLogoutClick = {
-                    // --- FIX IS HERE: SIGN OUT FIRST ---
-                    try {
-                        FirebaseAuth.getInstance().signOut()
-                    } catch (e: Exception) {
-                        // Prevents crash if Firebase isn't set up yet
-                    }
+                    try { FirebaseAuth.getInstance().signOut() } catch (e: Exception) {}
+                    navController.navigate("auth") { popUpTo(0) { inclusive = true } }
+                },
+                onAddLocationClick = {
+                    navController.navigate("location_picker")
+                },
+                viewModel = profileViewModel
+            )
+        }
 
-                    // THEN Navigate to Auth and clear history
-                    navController.navigate("auth") {
-                        popUpTo(0) { inclusive = true }
-                    }
+        composable("location_picker") {
+            val profileViewModel: ProfileViewModel = viewModel(
+                viewModelStoreOwner = navController.getBackStackEntry("profile")
+            )
+
+            LocationPickerScreen(
+                onBackClick = { navController.popBackStack() },
+                onLocationSelected = { name, lat, lng ->
+                    profileViewModel.addSafeLocation(name, lat, lng)
+                    navController.popBackStack()
                 }
             )
         }
 
-        // 5. REPORT SCREEN
         composable(
             route = "report/{lat}/{lng}",
             arguments = listOf(
