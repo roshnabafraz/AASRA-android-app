@@ -29,20 +29,22 @@ import com.roshnab.aasra.data.ReportRepository
 import org.osmdroid.util.GeoPoint
 import java.util.Date
 import java.util.regex.Pattern
+import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
     // 1. Fetch Reports
-    val activeReports by ReportRepository.getOpenReportsFlow().collectAsState(initial = emptyList())
+    val activeReports by ReportRepository.getOpenReportsFlow().collectAsState(initial = emptyList<Report>())
 
     // 2. Sort by Distance (Nearest first)
     val sortedReports = remember(activeReports, volunteerLocation) {
         if (volunteerLocation == null) {
-            activeReports // No location, show as is
+            activeReports
         } else {
-            activeReports.sortedBy { report ->
-                calculateDist(
+            activeReports.sortedBy { report: Report ->
+                // Using the unique function for this screen
+                listScreenCalculateDist(
                     volunteerLocation.latitude, volunteerLocation.longitude,
                     report.locationLat, report.locationLng
                 )
@@ -66,7 +68,7 @@ fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Refresh logic if needed */ }) {
+                    IconButton(onClick = { /* Refresh logic */ }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
                 },
@@ -116,11 +118,10 @@ fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
 fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?) {
     val context = LocalContext.current
 
-    // --- Data Parsing ---
-
-    // 1. Calculate Distance
+    // --- Calculations ---
     val distanceInfo = if (volunteerLocation != null && report.locationLat != 0.0) {
-        val dist = calculateDist(
+        // Using the unique function for this screen
+        val dist = listScreenCalculateDist(
             volunteerLocation.latitude, volunteerLocation.longitude,
             report.locationLat, report.locationLng
         )
@@ -129,24 +130,21 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?) {
         "-- km"
     }
 
-    // 2. Time Ago
+    // Time Ago
     val timeAgo = getRelativeTime(report.timestamp)
 
-    // 3. Extract Affected Count & Clean Description
-    // We look for the string "[Affected: X people]" which we saved earlier
+    // Affected Count Extraction
     val affectedMatcher = Pattern.compile("\\[Affected: (\\d+) people\\]").matcher(report.description)
     val affectedCount = if (affectedMatcher.find()) affectedMatcher.group(1) else "1"
 
-    // Remove the [Affected...] tag from the visible description text to keep it clean
+    // Clean Description
     val cleanDescription = report.description.replace("\\[Affected:.*?\\]".toRegex(), "").trim()
-    val finalDescription = if (cleanDescription.isBlank()) "No additional details provided." else cleanDescription
+    val finalDescription = if (cleanDescription.isBlank()) "No details provided." else cleanDescription
 
-
-    // --- UI Colors ---
     val categoryColor = when(report.category) {
         "Medical" -> MaterialTheme.colorScheme.error
-        "Flood" -> Color(0xFF1E88E5) // Blue
-        "Food" -> Color(0xFF43A047) // Green
+        "Flood" -> Color(0xFF1E88E5)
+        "Food" -> Color(0xFF43A047)
         else -> MaterialTheme.colorScheme.secondary
     }
 
@@ -158,13 +156,12 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // --- HEADER: Category + Distance + Time ---
+            // --- HEADER ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Category Badge
                 Surface(
                     shape = RoundedCornerShape(50),
                     color = categoryColor.copy(alpha = 0.1f),
@@ -179,36 +176,25 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?) {
                     )
                 }
 
-                // Distance & Time
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.NearMe, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.tertiary)
                     Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = distanceInfo,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Text(text = distanceInfo, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
 
                     Spacer(Modifier.width(8.dp))
-                    Text("•", color = Color.Gray) // Dot separator
+                    Text("•", color = Color.Gray)
                     Spacer(Modifier.width(8.dp))
 
                     Icon(Icons.Outlined.Schedule, null, modifier = Modifier.size(14.dp), tint = Color.Gray)
                     Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = timeAgo,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.Gray
-                    )
+                    Text(text = timeAgo, style = MaterialTheme.typography.labelMedium, color = Color.Gray)
                 }
             }
 
             Spacer(Modifier.height(16.dp))
 
-            // --- BODY: Name + Affected Count + Description ---
+            // --- BODY ---
             Row(verticalAlignment = Alignment.Top) {
-                // Avatar Placeholder
                 Surface(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.primaryContainer,
@@ -227,46 +213,21 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?) {
                 Spacer(Modifier.width(12.dp))
 
                 Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = report.victimName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(text = report.victimName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
-                        // NEW: Affected People Badge
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                        // Affected Badge
+                        Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
+                            Row(Modifier.padding(horizontal = 6.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Outlined.Group, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
                                 Spacer(Modifier.width(4.dp))
-                                Text(
-                                    text = "$affectedCount Affected",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
+                                Text(text = "$affectedCount Affected", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
                             }
                         }
                     }
 
                     Spacer(Modifier.height(4.dp))
-
-                    Text(
-                        text = finalDescription,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
+                    Text(text = finalDescription, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
                 }
             }
 
@@ -274,14 +235,11 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             Spacer(Modifier.height(12.dp))
 
-            // --- FOOTER: Actions ---
+            // --- FOOTER ---
             Row(modifier = Modifier.fillMaxWidth()) {
-                // Call Button
                 OutlinedButton(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_DIAL).apply {
-                            data = Uri.parse("tel:${report.victimPhone}")
-                        }
+                        val intent = Intent(Intent.ACTION_DIAL).apply { data = Uri.parse("tel:${report.victimPhone}") }
                         context.startActivity(intent)
                     },
                     modifier = Modifier.weight(1f),
@@ -292,11 +250,8 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?) {
 
                 Spacer(Modifier.width(12.dp))
 
-                // Accept & Navigate Button
                 Button(
-                    onClick = {
-                        launchGoogleMaps(context, report.locationLat, report.locationLng)
-                    },
+                    onClick = { launchGoogleMaps(context, report.locationLat, report.locationLng) },
                     modifier = Modifier.weight(3f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
@@ -310,17 +265,29 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?) {
     }
 }
 
-fun getRelativeTime(date: Date?): String {
+// --- Unique Helper Functions for this Screen ---
+
+private fun listScreenCalculateDist(startLat: Double, startLng: Double, endLat: Double, endLng: Double): Double {
+    val earthRadius = 6371.0
+    val dLat = Math.toRadians(endLat - startLat)
+    val dLng = Math.toRadians(endLng - startLng)
+    val a = sin(dLat / 2) * sin(dLat / 2) +
+            cos(Math.toRadians(startLat)) * cos(Math.toRadians(endLat)) *
+            sin(dLng / 2) * sin(dLng / 2)
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return earthRadius * c
+}
+
+private fun getRelativeTime(date: Date?): String {
     if (date == null) return "Just now"
     val now = System.currentTimeMillis()
     val time = date.time
     val diff = now - time
-
     return when {
         diff < DateUtils.MINUTE_IN_MILLIS -> "Just now"
-        diff < DateUtils.HOUR_IN_MILLIS -> "${diff / DateUtils.MINUTE_IN_MILLIS} min ago"
-        diff < DateUtils.DAY_IN_MILLIS -> "${diff / DateUtils.HOUR_IN_MILLIS} hr ago"
-        else -> "${diff / DateUtils.DAY_IN_MILLIS} days ago"
+        diff < DateUtils.HOUR_IN_MILLIS -> "${diff / DateUtils.MINUTE_IN_MILLIS}m ago"
+        diff < DateUtils.DAY_IN_MILLIS -> "${diff / DateUtils.HOUR_IN_MILLIS}h ago"
+        else -> "${diff / DateUtils.DAY_IN_MILLIS}d ago"
     }
 }
 

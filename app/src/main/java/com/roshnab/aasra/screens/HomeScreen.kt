@@ -134,32 +134,32 @@ fun HomeScreen(
                             }
 
                             // 3. River Basin
-                            if (riverBasin.isNotEmpty()) {
-                                map.overlays.removeAll { it is Polygon && it.title == "River Basin" }
-                                val basinShape = Polygon().apply {
-                                    points = riverBasin
-                                    fillPaint.color = android.graphics.Color.argb(40, 135, 206, 235)
-                                    outlinePaint.color = android.graphics.Color.argb(100, 70, 130, 180)
-                                    outlinePaint.strokeWidth = 2f
-                                    title = "River Basin"
-                                }
-                                map.overlays.add(1, basinShape)
-                            }
+//                            if (riverBasin.isNotEmpty()) {
+//                                map.overlays.removeAll { it is Polygon && it.title == "River Basin" }
+//                                val basinShape = Polygon().apply {
+//                                    points = riverBasin
+//                                    fillPaint.color = android.graphics.Color.argb(40, 135, 206, 235)
+//                                    outlinePaint.color = android.graphics.Color.argb(100, 70, 130, 180)
+//                                    outlinePaint.strokeWidth = 2f
+//                                    title = "River Basin"
+//                                }
+//                                map.overlays.add(1, basinShape)
+//                            }
 
                             // 4. Detailed River Polygons
-                            if (riverPolygons.isNotEmpty()) {
-                                map.overlays.removeAll { it is Polygon && it.title == "River Water" }
-                                riverPolygons.forEach { riverPoints ->
-                                    val riverShape = Polygon().apply {
-                                        points = riverPoints
-                                        fillPaint.color = android.graphics.Color.argb(150, 30, 144, 255)
-                                        outlinePaint.color = android.graphics.Color.parseColor("#1E90FF")
-                                        outlinePaint.strokeWidth = 3f
-                                        title = "River Water"
-                                    }
-                                    map.overlays.add(riverShape)
-                                }
-                            }
+//                            if (riverPolygons.isNotEmpty()) {
+//                                map.overlays.removeAll { it is Polygon && it.title == "River Water" }
+//                                riverPolygons.forEach { riverPoints ->
+//                                    val riverShape = Polygon().apply {
+//                                        points = riverPoints
+//                                        fillPaint.color = android.graphics.Color.argb(150, 30, 144, 255)
+//                                        outlinePaint.color = android.graphics.Color.parseColor("#1E90FF")
+//                                        outlinePaint.strokeWidth = 3f
+//                                        title = "River Water"
+//                                    }
+//                                    map.overlays.add(riverShape)
+//                                }
+//                            }
 
                             // 5. Green Dots (Barrages) - NOW WITH CLICK LISTENER
                             if (riverBarrages.isNotEmpty()) {
@@ -275,7 +275,7 @@ fun HomeScreen(
                             isDarkTheme = false,
                             onThemeChanged = {},
                             onSupportClick = {},
-                            // REMOVED the isVolunteer = false line from here
+                         //   isVolunteer = false, // Victim View
                             viewModel = profileViewModel
                         )
                     }

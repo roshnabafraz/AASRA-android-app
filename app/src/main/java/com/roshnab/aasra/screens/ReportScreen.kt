@@ -134,15 +134,15 @@ fun ReportScreen(
                 leadingIcon = { Icon(Icons.Filled.Person, null) }
             )
 
-            OutlinedButton(
-                onClick = { /* TODO: Open Camera Logic */ },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Outlined.PhotoCamera, null)
-                Spacer(Modifier.width(8.dp))
-                Text("Add Photo / Video Evidence")
-            }
+//            OutlinedButton(
+//                onClick = { /* TODO: Open Camera Logic */ },
+//                modifier = Modifier.fillMaxWidth().height(56.dp),
+//                shape = RoundedCornerShape(12.dp)
+//            ) {
+//                Icon(Icons.Outlined.PhotoCamera, null)
+//                Spacer(Modifier.width(8.dp))
+//                Text("Add Photo / Video Evidence")
+//            }
 
             OutlinedTextField(
                 value = description,

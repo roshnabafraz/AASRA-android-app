@@ -56,6 +56,9 @@ fun VolunteerHomeScreen(onLogoutClick: () -> Unit) {
     var riverBarrages by remember { mutableStateOf<List<Barrage>>(emptyList()) }
     var riverBasin by remember { mutableStateOf<List<GeoPoint>>(emptyList()) }
 
+    var selectedBarrage by remember { mutableStateOf<Barrage?>(null) }
+
+
     // Live Data
     val activeReports by ReportRepository.getOpenReportsFlow().collectAsState(initial = emptyList())
     var selectedReport by remember { mutableStateOf<Report?>(null) }
@@ -138,33 +141,70 @@ fun VolunteerHomeScreen(onLogoutClick: () -> Unit) {
                                     }
 
                                     // 3. River Basin
-                                    if (riverBasin.isNotEmpty()) {
-                                        map.overlays.removeAll { it is Polygon && it.title == "River Basin" }
-                                        val basinShape = Polygon().apply {
-                                            points = riverBasin
-                                            fillPaint.color = android.graphics.Color.argb(40, 135, 206, 235)
-                                            outlinePaint.color = android.graphics.Color.TRANSPARENT
-                                            title = "River Basin"
-                                        }
-                                        map.overlays.add(1, basinShape)
-                                    }
+//                                    if (riverBasin.isNotEmpty()) {
+//                                        map.overlays.removeAll { it is Polygon && it.title == "River Basin" }
+//                                        val basinShape = Polygon().apply {
+//                                            points = riverBasin
+//                                            fillPaint.color = android.graphics.Color.argb(40, 135, 206, 235)
+//                                            outlinePaint.color = android.graphics.Color.TRANSPARENT
+//                                            title = "River Basin"
+//                                        }
+//                                        map.overlays.add(1, basinShape)
+//                                    }
 
                                     // 4. River Water
-                                    if (riverPolygons.isNotEmpty()) {
-                                        map.overlays.removeAll { it is Polygon && it.title == "River Water" }
-                                        riverPolygons.forEach { riverPoints ->
-                                            val riverShape = Polygon().apply {
-                                                points = riverPoints
-                                                fillPaint.color = android.graphics.Color.argb(150, 30, 144, 255)
-                                                outlinePaint.color = android.graphics.Color.parseColor("#1E90FF")
-                                                outlinePaint.strokeWidth = 3f
-                                                title = "River Water"
+//                                    if (riverPolygons.isNotEmpty()) {
+//                                        map.overlays.removeAll { it is Polygon && it.title == "River Water" }
+//                                        riverPolygons.forEach { riverPoints ->
+//                                            val riverShape = Polygon().apply {
+//                                                points = riverPoints
+//                                                fillPaint.color = android.graphics.Color.argb(150, 30, 144, 255)
+//                                                outlinePaint.color = android.graphics.Color.parseColor("#1E90FF")
+//                                                outlinePaint.strokeWidth = 3f
+//                                                title = "River Water"
+//                                            }
+//                                            map.overlays.add(riverShape)
+//                                        }
+//                                    }
+
+                                    // 5. Green Dots (Barrages) - NOW WITH CLICK LISTENER
+                                    if (riverBarrages.isNotEmpty()) {
+                                        map.overlays.removeAll { it is Marker && it.title?.startsWith("Barrage") == true }
+
+                                        val size = 32
+                                        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+                                        val canvas = Canvas(bitmap)
+                                        val paint = Paint()
+                                        paint.isAntiAlias = true
+                                        paint.color = android.graphics.Color.parseColor("#008000")
+                                        paint.style = Paint.Style.FILL
+                                        canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+                                        paint.color = android.graphics.Color.WHITE
+                                        paint.style = Paint.Style.STROKE
+                                        paint.strokeWidth = 4f
+                                        canvas.drawCircle(size / 2f, size / 2f, (size / 2f) - 2, paint)
+
+                                        val dotIcon = BitmapDrawable(context.resources, bitmap)
+
+                                        riverBarrages.forEach { barrage ->
+                                            val marker = Marker(map).apply {
+                                                position = barrage.location
+                                                icon = dotIcon
+                                                title = "Barrage: ${barrage.name}"
+                                                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+
+                                                // ON CLICK LISTENER
+                                                setOnMarkerClickListener { _, _ ->
+                                                    selectedBarrage = barrage
+                                                    true // Return true to consume the event (prevent default InfoWindow)
+                                                }
                                             }
-                                            map.overlays.add(riverShape)
+                                            map.overlays.add(marker)
                                         }
                                     }
 
-                                    // 5. Reports (Red Markers)
+
+                                    // 6. Reports (Red Markers)
                                     if (activeReports.isNotEmpty()) {
                                         map.overlays.removeAll { it is Marker && it.title?.startsWith("SOS") == true }
                                         val rSize = 48
@@ -198,6 +238,14 @@ fun VolunteerHomeScreen(onLogoutClick: () -> Unit) {
                                     map.invalidate()
                                 }
                             )
+
+                            // BARRAGE DETAIL POPUP
+                            if (selectedBarrage != null) {
+                                BarrageDetailDialog(
+                                    barrage = selectedBarrage!!,
+                                    onDismiss = { selectedBarrage = null }
+                                )
+                            }
 
                             // Volunteer Badge
                             Box(Modifier.align(Alignment.TopStart).padding(16.dp)) {
