@@ -209,10 +209,9 @@ fun VolunteerHomeScreen(
                                                 title = "Barrage: ${barrage.name}"
                                                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
 
-                                                // ON CLICK LISTENER
                                                 setOnMarkerClickListener { _, _ ->
                                                     selectedBarrage = barrage
-                                                    true // Return true to consume the event (prevent default InfoWindow)
+                                                    true
                                                 }
                                             }
                                             map.overlays.add(marker)
@@ -220,7 +219,6 @@ fun VolunteerHomeScreen(
                                     }
 
 
-                                    // 6. Reports (Red Markers)
                                     if (activeReports.isNotEmpty()) {
                                         map.overlays.removeAll { it is Marker && it.title?.startsWith("SOS") == true }
                                         val rSize = 48
@@ -255,7 +253,6 @@ fun VolunteerHomeScreen(
                                 }
                             )
 
-                            // BARRAGE DETAIL POPUP
                             if (selectedBarrage != null) {
                                 BarrageDetailDialog(
                                     barrage = selectedBarrage!!,
@@ -263,7 +260,6 @@ fun VolunteerHomeScreen(
                                 )
                             }
 
-                            // Volunteer Badge
                             Box(Modifier.align(Alignment.TopStart).padding(16.dp)) {
                                 AssistChip(
                                     onClick = {},
@@ -321,7 +317,6 @@ fun VolunteerHomeScreen(
     }
 }
 
-// Reuse the calculation from list screen logic if in same package, or redefine here privately
 fun calculateDist(startLat: Double, startLng: Double, endLat: Double, endLng: Double): Double {
     val earthRadius = 6371.0
     val dLat = Math.toRadians(endLat - startLat)
@@ -337,7 +332,6 @@ fun calculateDist(startLat: Double, startLng: Double, endLat: Double, endLng: Do
 fun FirebaseReportDialog(report: Report, myLocation: GeoPoint?, onDismiss: () -> Unit) {
     val context = LocalContext.current
 
-    // 1. Calculate Distance
     val distanceText = if (myLocation != null && report.locationLat != 0.0) {
         val dist = calculateDist(myLocation.latitude, myLocation.longitude, report.locationLat, report.locationLng)
         if (dist < 1.0) "${String.format("%.0f", dist * 1000)}m away" else "${String.format("%.1f", dist)} km away"
@@ -345,11 +339,9 @@ fun FirebaseReportDialog(report: Report, myLocation: GeoPoint?, onDismiss: () ->
         "Distance Unknown"
     }
 
-    // 2. Extract Affected Count
     val affectedMatcher = Pattern.compile("\\[Affected: (\\d+) people\\]").matcher(report.description)
     val affectedCount = if (affectedMatcher.find()) affectedMatcher.group(1) else "Unknown"
 
-    // 3. Clean Description
     val cleanDescription = report.description.replace("\\[Affected:.*?\\]".toRegex(), "").trim()
     val finalDescription = if (cleanDescription.isBlank()) "No additional details provided." else cleanDescription
 
@@ -373,12 +365,10 @@ fun FirebaseReportDialog(report: Report, myLocation: GeoPoint?, onDismiss: () ->
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-                // INFO ROW: Distance & Affected
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Distance Badge
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.secondaryContainer
@@ -390,7 +380,6 @@ fun FirebaseReportDialog(report: Report, myLocation: GeoPoint?, onDismiss: () ->
                         }
                     }
 
-                    // Affected Badge
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.errorContainer
@@ -405,7 +394,6 @@ fun FirebaseReportDialog(report: Report, myLocation: GeoPoint?, onDismiss: () ->
 
                 Spacer(Modifier.height(16.dp))
 
-                // Victim Details
                 Text("Victim: ${report.victimName}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text("Phone: ${report.victimPhone}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 

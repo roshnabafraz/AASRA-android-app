@@ -42,9 +42,14 @@ class NotificationViewModel : ViewModel() {
                 if (snapshot != null) {
                     val notifList = snapshot.toObjects(AppNotification::class.java)
                     
+                    val oneHourAgo = System.currentTimeMillis() - 3600_000L
+                    val recentNotifs = notifList.filter { 
+                        it.timestamp == null || it.timestamp!!.time > oneHourAgo
+                    }
+                    
                     // Fire local push for newly added notifications
                     val oldIds = _notifications.value.map { it.notificationId }.toSet()
-                    val newNotifs = notifList.filter { !oldIds.contains(it.notificationId) && !it.isRead }
+                    val newNotifs = recentNotifs.filter { !oldIds.contains(it.notificationId) && !it.isRead }
                     
                     if (oldIds.isNotEmpty()) {
                         for (n in newNotifs) {
@@ -52,9 +57,24 @@ class NotificationViewModel : ViewModel() {
                         }
                     }
                     
-                    _notifications.value = notifList
+                    _notifications.value = recentNotifs
                 }
             }
+
+        // Periodic cleanup task to remove expired notifications dynamically while app is open
+        viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(60_000L) // check every minute
+                val oneHourAgo = System.currentTimeMillis() - 3600_000L
+                val currentList = _notifications.value
+                val filteredList = currentList.filter {
+                    it.timestamp == null || it.timestamp!!.time > oneHourAgo
+                }
+                if (filteredList.size != currentList.size) {
+                    _notifications.value = filteredList
+                }
+            }
+        }
     }
 
     fun markAsRead(notification: AppNotification) {

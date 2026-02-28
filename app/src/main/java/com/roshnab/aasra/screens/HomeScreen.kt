@@ -132,7 +132,6 @@ fun HomeScreen(
                             }
                         },
                         update = { map ->
-                            // 1. My Location Overlay
                             if (map.overlays.none { it is MyLocationNewOverlay }) {
                                 val locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(context), map)
                                 locationOverlay.enableMyLocation()
@@ -140,7 +139,6 @@ fun HomeScreen(
                                 myLocationOverlay = locationOverlay
                             }
 
-                            // 2. Green Flood Zone
                             if (borderPoints.isNotEmpty()) {
                                 map.overlays.removeAll { it is Polygon && it.title == "Pakistan Flood Zone" }
                                 val pakistanShape = Polygon().apply {
@@ -180,7 +178,6 @@ fun HomeScreen(
 //                                }
 //                            }
 
-                            // 5. Green Dots (Barrages) - NOW WITH CLICK LISTENER
                             if (riverBarrages.isNotEmpty()) {
                                 map.overlays.removeAll { it is Marker && it.title?.startsWith("Barrage") == true }
 
@@ -206,10 +203,9 @@ fun HomeScreen(
                                         title = "Barrage: ${barrage.name}"
                                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
 
-                                        // ON CLICK LISTENER
                                         setOnMarkerClickListener { _, _ ->
                                             selectedBarrage = barrage
-                                            true // Return true to consume the event (prevent default InfoWindow)
+                                            true
                                         }
                                     }
                                     map.overlays.add(marker)
@@ -220,7 +216,6 @@ fun HomeScreen(
                         }
                     )
 
-                    // BARRAGE DETAIL POPUP
                     if (selectedBarrage != null) {
                         BarrageDetailDialog(
                             barrage = selectedBarrage!!,
@@ -228,7 +223,6 @@ fun HomeScreen(
                         )
                     }
 
-                    // UI Elements
                     Box(Modifier.align(Alignment.TopCenter)) {
                         AasraTopBar(onProfileClick = { currentScreen = BottomNavScreen.Profile }, onNotificationClick = { })
                     }
@@ -268,7 +262,6 @@ fun HomeScreen(
                         Spacer(Modifier.width(8.dp))
                         Text("Report", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
-                    // Active Request Tracker
                     if (myActiveReport != null) {
                         Card(
                             modifier = Modifier
@@ -298,7 +291,6 @@ fun HomeScreen(
 
                 }
 
-                // Embedded Screens
                 BottomNavScreen.Donations -> {
                     Box(modifier = Modifier.padding(bottom = 100.dp)) {
                         DonationScreen(onBackClick = { currentScreen = BottomNavScreen.Home })
@@ -324,7 +316,6 @@ fun HomeScreen(
                             isDarkTheme = isDarkTheme,
                             onThemeChanged = onThemeChanged,
                             onSupportClick = onSupportClick,
-                         //   isVolunteer = false, // Victim View
                             viewModel = profileViewModel
                         )
                     }
@@ -347,11 +338,9 @@ fun HomeScreen(
     }
 }
 
-// THE POP-UP CARD WITH LIVE DATA
 @Composable
 fun BarrageDetailDialog(barrage: Barrage, onDismiss: () -> Unit) {
 
-    // --- LIVE DATA STATE ---
     var liveStatus by remember { mutableStateOf("Fetching live data...") }
     val scope = rememberCoroutineScope()
 
@@ -391,27 +380,24 @@ fun BarrageDetailDialog(barrage: Barrage, onDismiss: () -> Unit) {
 
                 DetailRow("River", barrage.river)
                 DetailRow("Height", barrage.height)
-
-                // SHOW LIVE STATUS
                 DetailRow("Live Status", liveStatus, isStatus = true)
 
                 Spacer(Modifier.height(16.dp))
 
-                // Inflow / Outflow Grid
                 Row(Modifier.fillMaxWidth()) {
                     FlowBox(
-                        title = "Historic Inflow", // Updated label to reflect static nature
+                        title = "Historic Inflow",
                         value = barrage.inflow,
                         modifier = Modifier.weight(1f),
-                        color = Color(0xFFE3F2FD), // Light Blue
+                        color = Color(0xFFE3F2FD),
                         textColor = Color(0xFF1565C0)
                     )
                     Spacer(Modifier.width(8.dp))
                     FlowBox(
-                        title = "Historic Outflow", // Updated label to reflect static nature
+                        title = "Historic Outflow",
                         value = barrage.outflow,
                         modifier = Modifier.weight(1f),
-                        color = Color(0xFFFFEBEE), // Light Red
+                        color = Color(0xFFFFEBEE),
                         textColor = Color(0xFFC62828)
                     )
                 }

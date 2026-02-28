@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.roshnab.aasra.data.AppNotification
 import com.roshnab.aasra.data.NotificationViewModel
+import com.roshnab.aasra.components.ShimmerCardItem
+import kotlinx.coroutines.delay
 import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,6 +34,12 @@ fun NotificationScreen(
     onBackClick: () -> Unit
 ) {
     val notifications by viewModel.notifications.collectAsState()
+    var isLoading by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        delay(600) // Brief delay to show premium shimmer loading
+        isLoading = false
+    }
 
     Scaffold(
         topBar = {
@@ -49,7 +58,16 @@ fun NotificationScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            if (notifications.isEmpty()) {
+            if (isLoading) {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(5) {
+                        ShimmerCardItem()
+                    }
+                }
+            } else if (notifications.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
@@ -93,7 +111,7 @@ fun NotificationItemCard(notification: AppNotification, onClick: () -> Unit) {
 
     Card(
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (notification.isRead) 1.dp else 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         modifier = Modifier
             .fillMaxWidth()

@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.roshnab.aasra.components.ShimmerCardItem
 import com.roshnab.aasra.data.EmergencyContact
 import com.roshnab.aasra.data.ProfileViewModel
 import com.roshnab.aasra.data.SafeLocation
@@ -129,7 +130,10 @@ fun ProfileScreen(
                     permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
                 }
 
-                if (state.emergencyContacts.isNotEmpty()) {
+                if (state.isLoading) {
+                    ShimmerCardItem()
+                    ShimmerCardItem()
+                } else if (state.emergencyContacts.isNotEmpty()) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         shape = RoundedCornerShape(12.dp),
@@ -171,9 +175,10 @@ fun ProfileScreen(
                     }
                 }
 
-                if (state.safeLocations.isEmpty()) {
-                    val msg = if (state.isLoading) "Loading locations..." else "No locations saved yet."
-                    Text(msg, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 16.dp))
+                if (state.isLoading) {
+                    ShimmerCardItem()
+                } else if (state.safeLocations.isEmpty()) {
+                    Text("No locations saved yet.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 16.dp))
                 } else {
                     state.safeLocations.forEach { loc ->
                         SettingsItem(

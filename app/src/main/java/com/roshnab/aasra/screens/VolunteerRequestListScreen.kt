@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.roshnab.aasra.data.Report
 import com.roshnab.aasra.data.ReportRepository
+import com.roshnab.aasra.components.ShimmerCardItem
+import kotlinx.coroutines.delay
 import org.osmdroid.util.GeoPoint
 import java.util.Date
 import java.util.regex.Pattern
@@ -38,7 +40,6 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
-    // 1. Fetch Reports
     val auth = remember { com.google.firebase.auth.FirebaseAuth.getInstance() }
     val currentUserId = auth.currentUser?.uid ?: ""
     val openReports by ReportRepository.getOpenReportsFlow().collectAsState(initial = emptyList<Report>())
@@ -46,8 +47,13 @@ fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
     
     var selectedTabIndex by remember { mutableStateOf(0) }
     val activeReports = if (selectedTabIndex == 0) openReports else myAcceptedReports
-
-    // 2. Sort by Distance (Nearest first)
+    
+    var isLoading by remember { mutableStateOf(true) }
+    LaunchedEffect(selectedTabIndex) {
+        isLoading = true
+        delay(500) // Brief loading skeleton on tab switch
+        isLoading = false
+    }
     val sortedReports = remember(activeReports, volunteerLocation, selectedTabIndex) {
         if (volunteerLocation == null) {
             activeReports
@@ -116,7 +122,16 @@ fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            if (sortedReports.isEmpty()) {
+            if (isLoading) {
+                LazyColumn(
+                    contentPadding = PaddingValues(bottom = 100.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(4) {
+                        ShimmerCardItem()
+                    }
+                }
+            } else if (sortedReports.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(64.dp), tint = Color.Green)
@@ -142,9 +157,7 @@ fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
 fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?, isAccepted: Boolean) {
     val context = LocalContext.current
 
-    // --- Calculations ---
     val distanceInfo = if (volunteerLocation != null && report.locationLat != 0.0) {
-        // Using the unique function for this screen
         val dist = listScreenCalculateDist(
             volunteerLocation.latitude, volunteerLocation.longitude,
             report.locationLat, report.locationLng
@@ -154,14 +167,11 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?, isAccepted: Boo
         "-- km"
     }
 
-    // Time Ago
     val timeAgo = getRelativeTime(report.timestamp)
 
-    // Affected Count Extraction
     val affectedMatcher = Pattern.compile("\\[Affected: (\\d+) people\\]").matcher(report.description)
     val affectedCount = if (affectedMatcher.find()) affectedMatcher.group(1) else "1"
 
-    // Clean Description
     val cleanDescription = report.description.replace("\\[Affected:.*?\\]".toRegex(), "").trim()
     val finalDescription = if (cleanDescription.isBlank()) "No details provided." else cleanDescription
 
@@ -180,7 +190,6 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?, isAccepted: Boo
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // --- HEADER ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -217,7 +226,6 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?, isAccepted: Boo
 
             Spacer(Modifier.height(16.dp))
 
-            // --- BODY ---
             Row(verticalAlignment = Alignment.Top) {
                 Surface(
                     shape = CircleShape,
