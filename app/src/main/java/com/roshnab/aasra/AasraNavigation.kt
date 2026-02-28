@@ -140,16 +140,32 @@ fun AasraNavigation(
             HelpSupportScreen(onBackClick = { navController.popBackStack() })
         }
 
-        composable("edit_profile") {
-            val profileViewModel: ProfileViewModel = viewModel()
+        composable("edit_profile") { backStackEntry ->
+            val parentRoute = navController.previousBackStackEntry?.destination?.route ?: "home"
+            val parentEntry = remember(backStackEntry) {
+                try {
+                    navController.getBackStackEntry(parentRoute)
+                } catch (e: Exception) {
+                    backStackEntry
+                }
+            }
+            val profileViewModel: ProfileViewModel = viewModel(parentEntry)
             EditProfileScreen(
                 onBackClick = { navController.popBackStack() },
                 viewModel = profileViewModel
             )
         }
 
-        composable("location_picker") {
-            val profileViewModel: ProfileViewModel = viewModel()
+        composable("location_picker") { backStackEntry ->
+            val parentRoute = navController.previousBackStackEntry?.destination?.route ?: "home"
+            val parentEntry = remember(backStackEntry) {
+                try {
+                    navController.getBackStackEntry(parentRoute)
+                } catch (e: Exception) {
+                    backStackEntry
+                }
+            }
+            val profileViewModel: ProfileViewModel = viewModel(parentEntry)
             LocationPickerScreen(
                 onBackClick = { navController.popBackStack() },
                 onLocationSelected = { name, lat, lng ->

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,7 +60,7 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var currentScreen by remember { mutableStateOf(BottomNavScreen.Home) }
+    var currentScreen by rememberSaveable { mutableStateOf(BottomNavScreen.Home) }
 
     // Map Data State
     var borderPoints by remember { mutableStateOf<List<GeoPoint>>(emptyList()) }
