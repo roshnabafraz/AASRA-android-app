@@ -62,16 +62,7 @@ fun AasraTopBar(
             // --- 2. RIGHT SIDE: ACTIONS (Notification + Profile) ---
             Row(verticalAlignment = Alignment.CenterVertically) {
 
-                // Notification Icon
-                IconButton(onClick = onNotificationClick) {
-                    Icon(
-                        imageVector = Icons.Filled.Notifications,
-                        contentDescription = "Notifications",
-                        tint = Color.Gray
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(4.dp))
+                // Notification Icon removed: Replaced by Bottom Navigation item.
 
                 // Profile Picture (Clickable)
                 Box(

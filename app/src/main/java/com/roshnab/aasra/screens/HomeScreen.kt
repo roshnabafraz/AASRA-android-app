@@ -51,6 +51,7 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
+import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
@@ -167,13 +168,12 @@ fun HomeScreen(
 
                             // 4. Detailed River Polygons
 //                            if (riverPolygons.isNotEmpty()) {
-//                                map.overlays.removeAll { it is Polygon && it.title == "River Water" }
+//                                map.overlays.removeAll { it is Polyline && it.title == "River Water" }
 //                                riverPolygons.forEach { riverPoints ->
-//                                    val riverShape = Polygon().apply {
-//                                        points = riverPoints
-//                                        fillPaint.color = android.graphics.Color.argb(150, 30, 144, 255)
+//                                    val riverShape = Polyline().apply {
+//                                        setPoints(riverPoints)
 //                                        outlinePaint.color = android.graphics.Color.parseColor("#1E90FF")
-//                                        outlinePaint.strokeWidth = 3f
+//                                        outlinePaint.strokeWidth = 10f
 //                                        title = "River Water"
 //                                    }
 //                                    map.overlays.add(riverShape)
