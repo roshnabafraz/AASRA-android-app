@@ -72,7 +72,12 @@ fun AasraNavigation(
                 onLogoutClick = {
                     try { FirebaseAuth.getInstance().signOut() } catch (e: Exception) {}
                     navController.navigate("auth") { popUpTo(0) { inclusive = true } }
-                }
+                },
+                onAddLocationClick = { navController.navigate("location_picker") },
+                onEditProfileClick = { navController.navigate("edit_profile") },
+                isDarkTheme = isDarkTheme,
+                onThemeChanged = onThemeChanged,
+                onSupportClick = { navController.navigate("help_support") }
             )
         }
 
@@ -104,7 +109,12 @@ fun AasraNavigation(
                 onLogoutClick = {
                     try { FirebaseAuth.getInstance().signOut() } catch (e: Exception) {}
                     navController.navigate("auth") { popUpTo(0) { inclusive = true } }
-                }
+                },
+                onAddLocationClick = { navController.navigate("location_picker") },
+                onEditProfileClick = { navController.navigate("edit_profile") },
+                isDarkTheme = isDarkTheme,
+                onThemeChanged = onThemeChanged,
+                onSupportClick = { navController.navigate("help_support") }
             )
         }
 
@@ -131,9 +141,7 @@ fun AasraNavigation(
         }
 
         composable("edit_profile") {
-            val profileViewModel: ProfileViewModel = viewModel(
-                viewModelStoreOwner = navController.getBackStackEntry("profile")
-            )
+            val profileViewModel: ProfileViewModel = viewModel()
             EditProfileScreen(
                 onBackClick = { navController.popBackStack() },
                 viewModel = profileViewModel
@@ -141,9 +149,7 @@ fun AasraNavigation(
         }
 
         composable("location_picker") {
-            val profileViewModel: ProfileViewModel = viewModel(
-                viewModelStoreOwner = navController.getBackStackEntry("profile")
-            )
+            val profileViewModel: ProfileViewModel = viewModel()
             LocationPickerScreen(
                 onBackClick = { navController.popBackStack() },
                 onLocationSelected = { name, lat, lng ->

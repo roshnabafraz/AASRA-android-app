@@ -50,7 +50,12 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 @Composable
 fun HomeScreen(
     onReportClick: (Double, Double) -> Unit,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    onAddLocationClick: () -> Unit,
+    onEditProfileClick: () -> Unit,
+    isDarkTheme: Boolean,
+    onThemeChanged: (Boolean) -> Unit,
+    onSupportClick: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -270,11 +275,11 @@ fun HomeScreen(
                         ProfileScreen(
                             onBackClick = { currentScreen = BottomNavScreen.Home },
                             onLogoutClick = onLogoutClick,
-                            onAddLocationClick = {},
-                            onEditProfileClick = {},
-                            isDarkTheme = false,
-                            onThemeChanged = {},
-                            onSupportClick = {},
+                            onAddLocationClick = onAddLocationClick,
+                            onEditProfileClick = onEditProfileClick,
+                            isDarkTheme = isDarkTheme,
+                            onThemeChanged = onThemeChanged,
+                            onSupportClick = onSupportClick,
                          //   isVolunteer = false, // Victim View
                             viewModel = profileViewModel
                         )

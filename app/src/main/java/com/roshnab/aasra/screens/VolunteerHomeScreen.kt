@@ -45,7 +45,14 @@ import java.util.regex.Pattern
 import kotlin.math.*
 
 @Composable
-fun VolunteerHomeScreen(onLogoutClick: () -> Unit) {
+fun VolunteerHomeScreen(
+    onLogoutClick: () -> Unit,
+    onAddLocationClick: () -> Unit,
+    onEditProfileClick: () -> Unit,
+    isDarkTheme: Boolean,
+    onThemeChanged: (Boolean) -> Unit,
+    onSupportClick: () -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var currentScreen by remember { mutableStateOf(BottomNavScreen.Home) }
@@ -278,11 +285,11 @@ fun VolunteerHomeScreen(onLogoutClick: () -> Unit) {
                         ProfileScreen(
                             onBackClick = { currentScreen = BottomNavScreen.Home },
                             onLogoutClick = onLogoutClick,
-                            onAddLocationClick = {},
-                            onEditProfileClick = {},
-                            isDarkTheme = false,
-                            onThemeChanged = {},
-                            onSupportClick = {},
+                            onAddLocationClick = onAddLocationClick,
+                            onEditProfileClick = onEditProfileClick,
+                            isDarkTheme = isDarkTheme,
+                            onThemeChanged = onThemeChanged,
+                            onSupportClick = onSupportClick,
                             viewModel = profileViewModel
                         )
                     }

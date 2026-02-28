@@ -7,6 +7,7 @@ object SettingsStore {
     private const val PREF_NAME = "aasra_settings"
     private const val KEY_DARK_MODE = "dark_mode"
     private const val KEY_IS_MANUAL = "is_manual_theme" // To know if user manually changed it
+    private const val KEY_LANGUAGE = "language"
 
     private lateinit var prefs: SharedPreferences
 
@@ -29,5 +30,11 @@ object SettingsStore {
                 .putBoolean(KEY_DARK_MODE, value)
                 .putBoolean(KEY_IS_MANUAL, true) // Mark that user made a choice
                 .apply()
+        }
+
+    var language: String
+        get() = prefs.getString(KEY_LANGUAGE, "English") ?: "English"
+        set(value) {
+            prefs.edit().putString(KEY_LANGUAGE, value).apply()
         }
 }

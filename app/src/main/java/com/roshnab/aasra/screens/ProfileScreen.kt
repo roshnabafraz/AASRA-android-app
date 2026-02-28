@@ -35,6 +35,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.roshnab.aasra.data.EmergencyContact
 import com.roshnab.aasra.data.ProfileViewModel
 import com.roshnab.aasra.data.SafeLocation
+import com.roshnab.aasra.data.SettingsStore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +79,7 @@ fun ProfileScreen(
         }
     }
 
-    var currentLanguage by remember { mutableStateOf("English") }
+    var currentLanguage by remember { mutableStateOf(SettingsStore.language) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -208,7 +209,9 @@ fun ProfileScreen(
                 }
 
                 SettingsItem(Icons.Filled.Language, "Language", currentLanguage) {
-                    currentLanguage = if (currentLanguage == "English") "Urdu" else "English"
+                    val newLang = if (currentLanguage == "English") "Urdu" else "English"
+                    currentLanguage = newLang
+                    SettingsStore.language = newLang
                 }
             }
 
