@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,12 +22,14 @@ import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,6 +40,9 @@ import com.roshnab.aasra.data.Barrage
 import com.roshnab.aasra.data.FloodRepository
 import com.roshnab.aasra.data.ProfileViewModel
 import com.roshnab.aasra.data.RiverRepository
+import com.roshnab.aasra.data.ReportRepository
+import com.roshnab.aasra.data.Report
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import org.osmdroid.api.IMapController
 import org.osmdroid.config.Configuration
@@ -61,6 +67,13 @@ fun HomeScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var currentScreen by rememberSaveable { mutableStateOf(BottomNavScreen.Home) }
+
+    val auth = remember { FirebaseAuth.getInstance() }
+    val currentUserId = auth.currentUser?.uid
+
+    // Active Reports
+    val myActiveReport by ReportRepository.getMyActiveReportFlow(currentUserId ?: "").collectAsState(initial = null)
+    var showMyRequestDialog by remember { mutableStateOf(false) }
 
     // Map Data State
     var borderPoints by remember { mutableStateOf<List<GeoPoint>>(emptyList()) }
@@ -255,6 +268,34 @@ fun HomeScreen(
                         Spacer(Modifier.width(8.dp))
                         Text("Report", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
+                    // Active Request Tracker
+                    if (myActiveReport != null) {
+                        Card(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 100.dp, start = 16.dp, end = 16.dp)
+                                .fillMaxWidth()
+                                .clickable { showMyRequestDialog = true },
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                        ) {
+                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.onErrorContainer)
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text("SOS Request Active", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
+                                    Text("Tap to view details or cancel", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                                }
+                            }
+                        }
+                    }
+
+                    if (showMyRequestDialog && myActiveReport != null) {
+                        VictimRequestDialog(
+                            report = myActiveReport!!,
+                            onDismiss = { showMyRequestDialog = false }
+                        )
+                    }
+
                 }
 
                 // Embedded Screens
@@ -264,10 +305,12 @@ fun HomeScreen(
                     }
                 }
 
-                BottomNavScreen.Safety -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Safety Guidelines & Protocols")
-                    }
+                BottomNavScreen.Notifications -> {
+                    val notificationViewModel: com.roshnab.aasra.data.NotificationViewModel = viewModel()
+                    com.roshnab.aasra.screens.NotificationScreen(
+                        viewModel = notificationViewModel,
+                        onBackClick = { currentScreen = BottomNavScreen.Home }
+                    )
                 }
 
                 BottomNavScreen.Profile -> {
@@ -297,7 +340,7 @@ fun HomeScreen(
         ) {
             AasraBottomBar(
                 currentScreen = currentScreen,
-                items = listOf(BottomNavScreen.Home, BottomNavScreen.Donations, BottomNavScreen.Safety, BottomNavScreen.Profile),
+                items = listOf(BottomNavScreen.Home, BottomNavScreen.Donations, BottomNavScreen.Notifications, BottomNavScreen.Profile),
                 onScreenSelected = { screen -> currentScreen = screen }
             )
         }
@@ -422,5 +465,113 @@ fun FlowBox(title: String, value: String, modifier: Modifier, color: Color, text
             color = textColor,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
+    }
+}
+
+@Composable
+fun VictimRequestDialog(report: Report, onDismiss: () -> Unit) {
+    var showCancelConfirm by remember { mutableStateOf(false) }
+    var selectedReason by remember { mutableStateOf("Resolved") }
+    val scope = rememberCoroutineScope()
+    
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(Modifier.padding(24.dp)) {
+                if (!showCancelConfirm) {
+                    if (report.status == "accepted") {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF4CAF50).copy(alpha = 0.1f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4CAF50))
+                        ) {
+                            Column(Modifier.padding(16.dp)) {
+                                Text("HELP IS ON ITS WAY!", color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                Spacer(Modifier.height(4.dp))
+                                Text("Volunteer: ${report.volunteerName}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                                Text("Phone: ${report.volunteerPhone}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
+                    }
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Active SOS Request",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close") }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                    Text("Status: ${report.status.uppercase()}", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Category: ${report.category}")
+                    Spacer(Modifier.height(8.dp))
+                    Text("Details: ${report.description}")
+
+                    Spacer(Modifier.height(24.dp))
+
+                    Button(
+                        onClick = { showCancelConfirm = true },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Close, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Cancel Request", fontSize = 16.sp)
+                    }
+                } else {
+                    Text(
+                        text = "Cancel Request",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text("Please specify the reason for cancellation:")
+                    
+                    Spacer(Modifier.height(8.dp))
+                    
+                    val reasons = listOf("Resolved", "Accidental Trigger", "Help Arrived", "Other")
+                    reasons.forEach { reason ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { selectedReason = reason }.padding(vertical = 4.dp)) {
+                            RadioButton(
+                                selected = selectedReason == reason,
+                                onClick = { selectedReason = reason }
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(reason)
+                        }
+                    }
+
+                    Spacer(Modifier.height(24.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showCancelConfirm = false }) {
+                            Text("Back")
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    ReportRepository.deleteReport(report.reportId, selectedReason)
+                                    onDismiss()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Confirm Cancel")
+                        }
+                    }
+                }
+            }
+        }
     }
 }

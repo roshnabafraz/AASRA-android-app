@@ -8,12 +8,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.roshnab.aasra.data.SettingsStore
 import com.roshnab.aasra.ui.theme.AASRATheme
+import com.roshnab.aasra.utils.LocalPushHelper
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         SettingsStore.init(this)
+        LocalPushHelper.init(this)
 
         setContent {
             val systemIsDark = isSystemInDarkTheme()

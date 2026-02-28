@@ -17,6 +17,66 @@ object ReportRepository {
             val docRef = reportsCollection.document()
             val finalReport = report.copy(reportId = docRef.id)
             docRef.set(finalReport).await()
+            
+            // Trigger Notification to Volunteers
+            NotificationService.broadcastToVolunteers(
+                title = "New SOS Request",
+                message = "A new ${report.category} emergency has been reported nearby by ${report.victimName}."
+            )
+            
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun acceptReport(reportId: String, volunteerId: String, volunteerName: String, volunteerPhone: String, victimId: String): Boolean {
+        return try {
+            reportsCollection.document(reportId)
+                .update(
+                    mapOf(
+                        "status" to "accepted",
+                        "volunteerId" to volunteerId,
+                        "volunteerName" to volunteerName,
+                        "volunteerPhone" to volunteerPhone
+                    )
+                ).await()
+                
+            // Notify the victim
+            NotificationService.sendNotificationToUser(
+                userId = victimId,
+                title = "Help is on the way!",
+                message = "A volunteer has accepted your request and is navigating to your location."
+            )
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun deleteReport(reportId: String, reason: String): Boolean {
+        return try {
+            reportsCollection.document(reportId)
+                .update(
+                    mapOf(
+                        "status" to "deleted",
+                        "deleteReason" to reason
+                    )
+                ).await()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun markAsResolved(reportId: String): Boolean {
+        return try {
+            reportsCollection.document(reportId)
+                .update("status", "resolved")
+                .await()
             true
         } catch (e: Exception) {
             e.printStackTrace()
@@ -25,7 +85,9 @@ object ReportRepository {
     }
 
     fun getOpenReportsFlow(): Flow<List<Report>> = callbackFlow {
-        val query = reportsCollection.limit(50)
+        val query = reportsCollection
+            .whereEqualTo("status", "pending")
+            .limit(50)
 
         val subscription = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
@@ -42,6 +104,43 @@ object ReportRepository {
             }
         }
 
+        awaitClose { subscription.remove() }
+    }
+
+    fun getMyAcceptedReportsFlow(volunteerId: String): Flow<List<Report>> = callbackFlow {
+        val query = reportsCollection
+            .whereEqualTo("status", "accepted")
+            .whereEqualTo("volunteerId", volunteerId)
+            .limit(50)
+
+        val subscription = query.addSnapshotListener { snapshot, error ->
+            if (error != null) return@addSnapshotListener
+            if (snapshot != null) {
+                val reports = snapshot.toObjects(Report::class.java)
+                trySend(reports)
+            }
+        }
+        awaitClose { subscription.remove() }
+    }
+
+    fun getMyActiveReportFlow(victimId: String): Flow<Report?> = callbackFlow {
+        val query = reportsCollection
+            .whereEqualTo("victimId", victimId)
+            .whereIn("status", listOf("pending", "accepted"))
+            .limit(1)
+
+        val subscription = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e("FIRESTORE_DEBUG", "Error fetching my active report", error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null && !snapshot.isEmpty) {
+                val report = snapshot.documents.first().toObject(Report::class.java)
+                trySend(report)
+            } else {
+                trySend(null)
+            }
+        }
         awaitClose { subscription.remove() }
     }
 }

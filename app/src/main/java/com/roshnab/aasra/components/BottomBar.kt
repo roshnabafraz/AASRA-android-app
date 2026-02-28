@@ -14,7 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,7 +30,7 @@ enum class BottomNavScreen(val label: String, val icon: ImageVector) {
     Home("Home", Icons.Filled.Home),
     Donations("Donations", Icons.Filled.Favorite),
     Requests("Requests", Icons.AutoMirrored.Filled.List), // <--- New Item
-    Safety("Safety", Icons.Filled.Security),
+    Notifications("Notifications", Icons.Filled.Notifications),
     Profile("Profile", Icons.Filled.Person)
 }
 

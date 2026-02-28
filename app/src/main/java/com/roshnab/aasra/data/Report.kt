@@ -14,7 +14,10 @@ data class Report(
     val locationLat: Double = 0.0,
     val locationLng: Double = 0.0,
     val status: String = "pending",
-    val priority: String = "calculating",
     val imageUrl: String = "",
+    val deleteReason: String = "",
+    val volunteerId: String = "",
+    val volunteerName: String = "",
+    val volunteerPhone: String = "",
     @ServerTimestamp val timestamp: Date? = null
 )

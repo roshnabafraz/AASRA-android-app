@@ -15,6 +15,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,15 +33,22 @@ import org.osmdroid.util.GeoPoint
 import java.util.Date
 import java.util.regex.Pattern
 import kotlin.math.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
     // 1. Fetch Reports
-    val activeReports by ReportRepository.getOpenReportsFlow().collectAsState(initial = emptyList<Report>())
+    val auth = remember { com.google.firebase.auth.FirebaseAuth.getInstance() }
+    val currentUserId = auth.currentUser?.uid ?: ""
+    val openReports by ReportRepository.getOpenReportsFlow().collectAsState(initial = emptyList<Report>())
+    val myAcceptedReports by ReportRepository.getMyAcceptedReportsFlow(currentUserId).collectAsState(initial = emptyList<Report>())
+    
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val activeReports = if (selectedTabIndex == 0) openReports else myAcceptedReports
 
     // 2. Sort by Distance (Nearest first)
-    val sortedReports = remember(activeReports, volunteerLocation) {
+    val sortedReports = remember(activeReports, volunteerLocation, selectedTabIndex) {
         if (volunteerLocation == null) {
             activeReports
         } else {
@@ -54,29 +64,43 @@ fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Urgent Requests", fontWeight = FontWeight.Bold)
-                        if (volunteerLocation != null) {
-                            Text(
-                                "Sorted by nearest location",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+            Column {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text("Requests", fontWeight = FontWeight.Bold)
+                            if (volunteerLocation != null && selectedTabIndex == 0) {
+                                Text(
+                                    "Sorted by nearest location",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* Refresh logic */ }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+                    },
+                    actions = {
+                        IconButton(onClick = { /* Refresh logic */ }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+                    )
                 )
-            )
+                TabRow(selectedTabIndex = selectedTabIndex) {
+                    Tab(
+                        selected = selectedTabIndex == 0,
+                        onClick = { selectedTabIndex = 0 },
+                        text = { Text("New Urgents", fontWeight = FontWeight.Bold) }
+                    )
+                    Tab(
+                        selected = selectedTabIndex == 1,
+                        onClick = { selectedTabIndex = 1 },
+                        text = { Text("Accepted", fontWeight = FontWeight.Bold) }
+                    )
+                }
+            }
         }
     ) { paddingValues ->
         Column(
@@ -106,7 +130,7 @@ fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(sortedReports) { report ->
-                        ReportItemCard(report = report, volunteerLocation = volunteerLocation)
+                        ReportItemCard(report = report, volunteerLocation = volunteerLocation, isAccepted = selectedTabIndex == 1)
                     }
                 }
             }
@@ -115,7 +139,7 @@ fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
 }
 
 @Composable
-fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?) {
+fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?, isAccepted: Boolean) {
     val context = LocalContext.current
 
     // --- Calculations ---
@@ -250,15 +274,46 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?) {
 
                 Spacer(Modifier.width(12.dp))
 
-                Button(
-                    onClick = { launchGoogleMaps(context, report.locationLat, report.locationLng) },
-                    modifier = Modifier.weight(3f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Accept & Navigate")
-                    Spacer(Modifier.width(8.dp))
-                    Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(16.dp))
+                val scope = rememberCoroutineScope()
+                val auth = remember { com.google.firebase.auth.FirebaseAuth.getInstance() }
+
+                if (!isAccepted) {
+                    Button(
+                        onClick = { 
+                            scope.launch {
+                                val uid = auth.currentUser?.uid ?: return@launch
+                                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                val userDoc = db.collection("users").document(uid).get().await()
+                                val vName = userDoc.getString("name") ?: "AASRA Volunteer"
+                                val vPhone = userDoc.getString("phone") ?: ""
+                                
+                                ReportRepository.acceptReport(report.reportId, uid, vName, vPhone, report.victimId)
+                                launchGoogleMaps(context, report.locationLat, report.locationLng)
+                            }
+                        },
+                        modifier = Modifier.weight(3f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("Accept & Navigate")
+                        Spacer(Modifier.width(8.dp))
+                        Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(16.dp))
+                    }
+                } else {
+                    Button(
+                        onClick = { 
+                            scope.launch {
+                                ReportRepository.markAsResolved(report.reportId)
+                            }
+                        },
+                        modifier = Modifier.weight(3f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                    ) {
+                        Text("Mark as Solved")
+                        Spacer(Modifier.width(8.dp))
+                        Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
+                    }
                 }
             }
         }

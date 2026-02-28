@@ -16,9 +16,12 @@ import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Check
+import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,6 +44,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import kotlinx.coroutines.tasks.await
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.util.regex.Pattern
 import kotlin.math.*
@@ -68,7 +72,11 @@ fun VolunteerHomeScreen(
 
 
     // Live Data
-    val activeReports by ReportRepository.getOpenReportsFlow().collectAsState(initial = emptyList())
+    val auth = remember { FirebaseAuth.getInstance() }
+    val currentUserId = auth.currentUser?.uid ?: ""
+    val openReports by ReportRepository.getOpenReportsFlow().collectAsState(initial = emptyList<Report>())
+    val myAcceptedReports by ReportRepository.getMyAcceptedReportsFlow(currentUserId).collectAsState(initial = emptyList<Report>())
+    val activeReports = openReports + myAcceptedReports
     var selectedReport by remember { mutableStateOf<Report?>(null) }
 
     // Location Tracking
@@ -275,10 +283,12 @@ fun VolunteerHomeScreen(
                     VolunteerRequestListScreen(volunteerLocation = myLocation)
                 }
 
-                BottomNavScreen.Safety -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Safety Guidelines & Protocols")
-                    }
+                BottomNavScreen.Notifications -> {
+                    val notificationViewModel: com.roshnab.aasra.data.NotificationViewModel = viewModel()
+                    com.roshnab.aasra.screens.NotificationScreen(
+                        viewModel = notificationViewModel,
+                        onBackClick = { currentScreen = BottomNavScreen.Home }
+                    )
                 }
                 BottomNavScreen.Profile -> {
                     Box(modifier = Modifier.padding(bottom = 100.dp)) {
@@ -304,7 +314,7 @@ fun VolunteerHomeScreen(
         ) {
             AasraBottomBar(
                 currentScreen = currentScreen,
-                items = listOf(BottomNavScreen.Home, BottomNavScreen.Requests, BottomNavScreen.Safety, BottomNavScreen.Profile),
+                items = listOf(BottomNavScreen.Home, BottomNavScreen.Requests, BottomNavScreen.Notifications, BottomNavScreen.Profile),
                 onScreenSelected = { screen -> currentScreen = screen }
             )
         }
@@ -406,18 +416,48 @@ fun FirebaseReportDialog(report: Report, myLocation: GeoPoint?, onDismiss: () ->
 
                 Spacer(Modifier.height(24.dp))
 
-                // Navigation Button
-                Button(
-                    onClick = {
-                        launchGoogleMaps(context, report.locationLat, report.locationLng)
-                    },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Icon(Icons.Default.Navigation, null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Start Navigation", fontSize = 16.sp)
+                val scope = rememberCoroutineScope()
+                val auth = remember { com.google.firebase.auth.FirebaseAuth.getInstance() }
+
+                if (report.status == "accepted") {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                com.roshnab.aasra.data.ReportRepository.markAsResolved(report.reportId)
+                                onDismiss()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                    ) {
+                        Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Mark as Solved", fontSize = 16.sp)
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                val uid = auth.currentUser?.uid ?: return@launch
+                                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                val userDoc = db.collection("users").document(uid).get().await()
+                                val vName = userDoc.getString("name") ?: "AASRA Volunteer"
+                                val vPhone = userDoc.getString("phone") ?: ""
+                                
+                                com.roshnab.aasra.data.ReportRepository.acceptReport(report.reportId, uid, vName, vPhone, report.victimId)
+                                launchGoogleMaps(context, report.locationLat, report.locationLng)
+                                onDismiss()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Icon(Icons.Default.Navigation, null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Accept & Navigate", fontSize = 16.sp)
+                    }
                 }
             }
         }
