@@ -29,7 +29,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     // SIGN UP
     fun signUp(
         email: String, pass: String, name: String, phone: String,
-        role: String, skills: String,
+        role: String, skills: String, cnic: String, age: String, photoBase64: String?,
         onSuccess: () -> Unit, onError: (String) -> Unit
     ) {
         viewModelScope.launch {
@@ -37,15 +37,20 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 val authResult = auth.createUserWithEmailAndPassword(email, pass).await()
                 val user = authResult.user
                 if (user != null) {
-                    val userData = hashMapOf(
+                    val userData = mutableMapOf<String, Any>(
                         "uid" to user.uid,
                         "name" to name,
                         "email" to email,
                         "phone" to phone,
                         "role" to role,
                         "skills" to skills,
+                        "cnic" to cnic,
+                        "age" to age,
                         "createdAt" to System.currentTimeMillis()
                     )
+                    if (!photoBase64.isNullOrBlank()) {
+                        userData["photoUrl"] = "data:image/jpeg;base64,$photoBase64"
+                    }
                     db.collection("users").document(user.uid).set(userData).await()
                     onSuccess()
                 }
@@ -55,7 +60,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun signInWithGoogle(idToken: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun signInWithGoogle(
+        idToken: String,
+        onSuccess: () -> Unit,
+        onNeedsProfile: (name: String, email: String, photoUrl: String) -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             try {
                 val credential = GoogleAuthProvider.getCredential(idToken, null)
@@ -65,22 +75,55 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 if (user != null) {
                     val doc = db.collection("users").document(user.uid).get().await()
 
-                    if (!doc.exists()) {
-                        val userData = hashMapOf(
-                            "uid" to user.uid,
-                            "name" to (user.displayName ?: "Google User"),
-                            "email" to (user.email ?: ""),
-                            "role" to "victim", // Default role
-                            "phone" to "",
-                            "createdAt" to System.currentTimeMillis()
+                    if (doc.exists() && !doc.getString("cnic").isNullOrBlank()) {
+                        onSuccess()
+                    } else {
+                        onNeedsProfile(
+                            user.displayName ?: "",
+                            user.email ?: "",
+                            user.photoUrl?.toString() ?: ""
                         )
-                        db.collection("users").document(user.uid).set(userData).await()
                     }
-                    onSuccess()
                 }
             } catch (e: Exception) {
                 Log.e("Auth", "Google Sign In Error", e)
                 onError(e.message ?: "Google Sign In Failed")
+            }
+        }
+    }
+
+    fun completeGoogleProfile(
+        name: String, email: String, phone: String,
+        role: String, skills: String, cnic: String, age: String, photoBase64: String?, photoUrlFromGoogle: String?,
+        onSuccess: () -> Unit, onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val user = auth.currentUser
+                if (user != null) {
+                    val userData = mutableMapOf<String, Any>(
+                        "uid" to user.uid,
+                        "name" to name,
+                        "email" to email,
+                        "phone" to phone,
+                        "role" to role,
+                        "skills" to skills,
+                        "cnic" to cnic,
+                        "age" to age,
+                        "createdAt" to System.currentTimeMillis()
+                    )
+                    if (!photoBase64.isNullOrBlank()) {
+                        userData["photoUrl"] = "data:image/jpeg;base64,$photoBase64"
+                    } else if (!photoUrlFromGoogle.isNullOrBlank()) {
+                        userData["photoUrl"] = photoUrlFromGoogle
+                    }
+                    db.collection("users").document(user.uid).set(userData).await()
+                    onSuccess()
+                } else {
+                    onError("No user logged in")
+                }
+            } catch (e: Exception) {
+                onError(e.message ?: "Profile completion failed")
             }
         }
     }

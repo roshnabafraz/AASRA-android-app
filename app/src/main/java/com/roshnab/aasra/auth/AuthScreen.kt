@@ -37,7 +37,17 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Base64
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.CircleShape
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -48,6 +58,35 @@ import com.roshnab.aasra.R
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 
+enum class AuthMode { LOGIN, SIGN_UP, COMPLETE_PROFILE }
+
+data class GoogleProfileData(val name: String, val email: String, val photoUrl: String)
+
+class CnicVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        var out = ""
+        for (i in text.indices) {
+            out += text[i]
+            if (i == 4 || i == 11) out += "-"
+        }
+
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                if (offset <= 4) return offset
+                if (offset <= 11) return offset + 1
+                return offset + 2
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 5) return offset
+                if (offset <= 13) return offset - 1
+                return offset - 2
+            }
+        }
+        return TransformedText(AnnotatedString(out), offsetMapping)
+    }
+}
+
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun AuthScreen(
@@ -56,7 +95,8 @@ fun AuthScreen(
 ) {
 
     val context = LocalContext.current
-    var isLoginMode by remember { mutableStateOf(true) }
+    var authMode by remember { mutableStateOf(AuthMode.LOGIN) }
+    var googleProfileData by remember { mutableStateOf<GoogleProfileData?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
     val credentialManager = remember { CredentialManager.create(context) }
@@ -86,6 +126,10 @@ fun AuthScreen(
                             viewModel.signInWithGoogle(
                                 idToken = googleIdTokenCredential.idToken,
                                 onSuccess = onAuthSuccess,
+                                onNeedsProfile = { name, email, photoUrl ->
+                                    googleProfileData = GoogleProfileData(name, email, photoUrl)
+                                    authMode = AuthMode.COMPLETE_PROFILE
+                                },
                                 onError = { error ->
                                     Toast.makeText(context, error, Toast.LENGTH_LONG).show()
                                 }
@@ -131,21 +175,32 @@ fun AuthScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            AnimatedContent(targetState = isLoginMode, label = "AuthToggle") { isLogin ->
-                if (isLogin) {
-                    LoginContent(
-                        viewModel = viewModel,
-                        onGoogleSignIn = onGoogleSignInClick,
-                        onToggleMode = { isLoginMode = false },
-                        onSuccess = onAuthSuccess
-                    )
-                } else {
-                    SignUpContent(
-                        viewModel = viewModel,
-                        onGoogleSignIn = onGoogleSignInClick,
-                        onToggleMode = { isLoginMode = true },
-                        onSuccess = onAuthSuccess
-                    )
+            AnimatedContent(targetState = authMode, label = "AuthToggle") { mode ->
+                when (mode) {
+                    AuthMode.LOGIN -> {
+                        LoginContent(
+                            viewModel = viewModel,
+                            onGoogleSignIn = onGoogleSignInClick,
+                            onToggleMode = { authMode = AuthMode.SIGN_UP },
+                            onSuccess = onAuthSuccess
+                        )
+                    }
+                    AuthMode.SIGN_UP -> {
+                        SignUpContent(
+                            viewModel = viewModel,
+                            onGoogleSignIn = onGoogleSignInClick,
+                            onToggleMode = { authMode = AuthMode.LOGIN },
+                            onSuccess = onAuthSuccess
+                        )
+                    }
+                    AuthMode.COMPLETE_PROFILE -> {
+                        CompleteProfileContent(
+                            viewModel = viewModel,
+                            profileData = googleProfileData,
+                            onCancel = { authMode = AuthMode.LOGIN },
+                            onSuccess = onAuthSuccess
+                        )
+                    }
                 }
             }
         }
@@ -234,13 +289,32 @@ fun SignUpContent(
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var cnic by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf("victim") } // Default Role
     var skills by remember { mutableStateOf("") }
+    
+    var photoUri by remember { mutableStateOf<Uri?>(null) }
+    var photoBase64 by remember { mutableStateOf<String?>(null) }
 
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            photoUri = uri
+            if (uri != null) {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val bytes = inputStream?.readBytes()
+                if (bytes != null) {
+                    photoBase64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                }
+            }
+        }
+    )
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = stringResource(R.string.create_account),
@@ -248,6 +322,37 @@ fun SignUpContent(
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 24.dp)
         )
+
+        // PROFILE PICTURE PICKER
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable { photoPickerLauncher.launch(
+                    androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                ) },
+            contentAlignment = Alignment.Center
+        ) {
+            if (photoBase64 != null) {
+                val imageBytes = Base64.decode(photoBase64, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = "Add Photo",
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
 
         Row(
             modifier = Modifier
@@ -258,7 +363,7 @@ fun SignUpContent(
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp))
         ) {
             RoleOption(
-                text = "I Need Help",
+                text = "Victim",
                 selected = selectedRole == "victim",
                 modifier = Modifier.weight(1f)
             ) { selectedRole = "victim" }
@@ -276,6 +381,28 @@ fun SignUpContent(
         Spacer(modifier = Modifier.height(12.dp))
 
         AasraTextField(value = email, onValueChange = { email = it }, label = "Email Address", icon = Icons.Filled.Email)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        AasraTextField(
+            value = cnic, 
+            onValueChange = { if (it.length <= 13 && it.all { char -> char.isDigit() }) cnic = it }, 
+            label = "CNIC Number", 
+            icon = Icons.Filled.Person,
+            keyboardType = KeyboardType.Number,
+            visualTransformation = CnicVisualTransformation()
+        )
+        if (cnic.isNotEmpty() && cnic.length < 13) {
+            Text("CNIC must be 13 digits", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.align(Alignment.Start).padding(start = 16.dp))
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        AasraTextField(
+            value = age, 
+            onValueChange = { if (it.all { char -> char.isDigit() }) age = it }, 
+            label = "Age", 
+            icon = Icons.Filled.Person,
+            keyboardType = KeyboardType.Number
+        )
         Spacer(modifier = Modifier.height(12.dp))
 
         AasraTextField(
@@ -325,6 +452,9 @@ fun SignUpContent(
                 phone = phone,
                 role = selectedRole,
                 skills = if (selectedRole == "volunteer") skills else "",
+                cnic = cnic,
+                age = age,
+                photoBase64 = photoBase64,
                 onSuccess = {
                     isLoading = false
                     onSuccess()
@@ -347,6 +477,232 @@ fun SignUpContent(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable { onToggleMode() }
             )
+        }
+    }
+}
+
+@Composable
+fun CompleteProfileContent(
+    viewModel: AuthViewModel,
+    profileData: GoogleProfileData?,
+    onCancel: () -> Unit,
+    onSuccess: () -> Unit
+) {
+    var phone by remember { mutableStateOf("") }
+    var cnic by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+    var selectedRole by remember { mutableStateOf("victim") }
+    var skills by remember { mutableStateOf("") }
+    
+    var photoUri by remember { mutableStateOf<Uri?>(null) }
+    var photoBase64 by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            photoUri = uri
+            if (uri != null) {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val bytes = inputStream?.readBytes()
+                if (bytes != null) {
+                    photoBase64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                }
+            }
+        }
+    )
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = "Complete Profile",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Text(text = "Please complete your details to finish signing up.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        // PROFILE PICTURE PICKER
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable { photoPickerLauncher.launch(
+                    androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                ) },
+            contentAlignment = Alignment.Center
+        ) {
+            if (photoBase64 != null) {
+                val imageBytes = Base64.decode(photoBase64, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else if (profileData?.photoUrl != null && profileData.photoUrl.isNotBlank()) {
+                // Show a placeholder or use Coil to load if available, here we just show Icon for simplicity
+                // In a real app we'd use AsyncImage, but currently this app loads Base64.
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = "Add Photo",
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = "Add Photo",
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp))
+        ) {
+            RoleOption(
+                text = "Victim",
+                selected = selectedRole == "victim",
+                modifier = Modifier.weight(1f)
+            ) { selectedRole = "victim" }
+
+            RoleOption(
+                text = "Volunteer",
+                selected = selectedRole == "volunteer",
+                modifier = Modifier.weight(1f)
+            ) { selectedRole = "volunteer" }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Read-only fields
+        OutlinedTextField(
+            value = profileData?.name ?: "",
+            onValueChange = { },
+            label = { Text("Full Name") },
+            leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
+            readOnly = true,
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                disabledBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = profileData?.email ?: "",
+            onValueChange = { },
+            label = { Text("Email Address") },
+            leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
+            readOnly = true,
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                disabledBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        AasraTextField(
+            value = cnic, 
+            onValueChange = { if (it.length <= 13 && it.all { char -> char.isDigit() }) cnic = it }, 
+            label = "CNIC Number", 
+            icon = Icons.Filled.Person,
+            keyboardType = KeyboardType.Number,
+            visualTransformation = CnicVisualTransformation()
+        )
+        if (cnic.isNotEmpty() && cnic.length < 13) {
+            Text("CNIC must be 13 digits", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.align(Alignment.Start).padding(start = 16.dp))
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        AasraTextField(
+            value = age, 
+            onValueChange = { if (it.all { char -> char.isDigit() }) age = it }, 
+            label = "Age", 
+            icon = Icons.Filled.Person,
+            keyboardType = KeyboardType.Number
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        AasraTextField(
+            value = phone,
+            onValueChange = { phone = it },
+            label = "Phone Number",
+            icon = Icons.Filled.Phone,
+            keyboardType = KeyboardType.Phone
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        AnimatedVisibility(visible = selectedRole == "volunteer") {
+            Column {
+                AasraTextField(
+                    value = skills,
+                    onValueChange = { skills = it },
+                    label = "Skills (e.g. First Aid)",
+                    icon = Icons.Filled.MedicalServices
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        AasraButton(text = "Complete Profile", isLoading = isLoading) {
+            if (cnic.length != 13 || age.isBlank() || phone.isBlank()) {
+                Toast.makeText(context, "Please fill required details correctly", Toast.LENGTH_SHORT).show()
+                return@AasraButton
+            }
+
+            isLoading = true
+            viewModel.completeGoogleProfile(
+                name = profileData?.name ?: "",
+                email = profileData?.email ?: "",
+                phone = phone,
+                role = selectedRole,
+                skills = if (selectedRole == "volunteer") skills else "",
+                cnic = cnic,
+                age = age,
+                photoBase64 = photoBase64,
+                photoUrlFromGoogle = profileData?.photoUrl,
+                onSuccess = {
+                    isLoading = false
+                    onSuccess()
+                },
+                onError = { error ->
+                    isLoading = false
+                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        TextButton(onClick = onCancel) {
+            Text("Cancel", color = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -378,6 +734,7 @@ fun AasraTextField(
     isPassword: Boolean = false,
     isVisible: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,
+    visualTransformation: VisualTransformation? = null,
     onToggleVisibility: () -> Unit = {}
 ) {
     OutlinedTextField(
@@ -388,7 +745,7 @@ fun AasraTextField(
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
-        visualTransformation = if (isPassword && !isVisible) PasswordVisualTransformation() else VisualTransformation.None,
+        visualTransformation = visualTransformation ?: if (isPassword && !isVisible) PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Next),
         trailingIcon = {
             if (isPassword) {
