@@ -58,6 +58,8 @@ dependencies {
     implementation(libs.androidx.compose.animation.core.lint)
     implementation(libs.androidx.navigation.common.ktx)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
+    implementation("io.coil-kt:coil-compose:2.6.0")
     implementation(libs.androidx.compose.ui.text)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

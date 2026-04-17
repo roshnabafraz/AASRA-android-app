@@ -25,6 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.roshnab.aasra.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +37,7 @@ fun HelpSupportScreen(onBackClick: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Help & Support") },
+                title = { Text(stringResource(R.string.help_support)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Filled.ArrowBack, "Back")
@@ -53,7 +55,7 @@ fun HelpSupportScreen(onBackClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
 
-            Text("Contact Us", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.contact_us), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -86,7 +88,7 @@ fun HelpSupportScreen(onBackClick: () -> Unit) {
 
             Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            Text("Frequently Asked Questions", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.frequently_asked_questions), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
 
             FAQItem("How do I report a flood?", "Go to the Home screen, tap the red 'Report' button, and confirm your location. This sends an alert to our disaster management system.")
             FAQItem("Is my location data private?", "Yes. We only use your location to send you critical flood alerts or when you actively submit a disaster report.")

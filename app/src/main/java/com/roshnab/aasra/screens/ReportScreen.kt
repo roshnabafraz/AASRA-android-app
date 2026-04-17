@@ -32,6 +32,8 @@ import com.roshnab.aasra.data.ReportRepository
 import com.roshnab.aasra.data.RiverRepository
 import kotlinx.coroutines.launch
 import kotlin.math.*
+import com.roshnab.aasra.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,7 +89,7 @@ fun ReportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Request Assistance", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.request_assistance), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -110,7 +112,7 @@ fun ReportScreen(
             // Location Card showing Distance to River
             LocationCard(latitude, longitude, nearestBarrageInfo)
 
-            Text("What do you need?", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(stringResource(R.string.what_do_you_need), fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -121,13 +123,13 @@ fun ReportScreen(
                 IncidentTypeItem("Other", Icons.Filled.Info, selectedType == "Other") { selectedType = "Other" }
             }
 
-            Text("Details", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(stringResource(R.string.details), fontWeight = FontWeight.Bold, fontSize = 18.sp)
             PeopleCounter(count = affectedCount, onCountChange = { affectedCount = it })
 
             OutlinedTextField(
                 value = age,
                 onValueChange = { age = it },
-                label = { Text("Victim Age (Approx)") },
+                label = { Text(stringResource(R.string.victim_age_approx)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -141,13 +143,13 @@ fun ReportScreen(
 //            ) {
 //                Icon(Icons.Outlined.PhotoCamera, null)
 //                Spacer(Modifier.width(8.dp))
-//                Text("Add Photo / Video Evidence")
+//                Text(stringResource(R.string.add_photo_video_evidence))
 //            }
 
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Additional Details (Optional)") },
+                label = { Text(stringResource(R.string.additional_details_optional)) },
                 modifier = Modifier.fillMaxWidth().height(120.dp),
                 shape = RoundedCornerShape(12.dp)
             )
@@ -155,7 +157,7 @@ fun ReportScreen(
             OutlinedTextField(
                 value = contactNumber,
                 onValueChange = { contactNumber = it },
-                label = { Text("Contact Number") },
+                label = { Text(stringResource(R.string.contact_number)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -209,9 +211,9 @@ fun ReportScreen(
                 if (isSubmitting) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("SENDING SOS...", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.sending_sos), fontWeight = FontWeight.Bold)
                 } else {
-                    Text("SEND SOS REQUEST", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(stringResource(R.string.send_sos_request), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }
@@ -242,7 +244,7 @@ fun LocationCard(lat: Double, lng: Double, nearestInfo: String) {
                 Icon(Icons.Filled.Place, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(16.dp))
                 Column {
-                    Text("Selected Location", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                    Text(stringResource(R.string.selected_location), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
                     Text("${String.format("%.5f", lat)}, ${String.format("%.5f", lng)}", fontWeight = FontWeight.Bold)
                 }
             }
@@ -253,7 +255,7 @@ fun LocationCard(lat: Double, lng: Double, nearestInfo: String) {
                 Icon(Icons.Outlined.Water, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.width(16.dp))
                 Column {
-                    Text("Proximity to Risk", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                    Text(stringResource(R.string.proximity_to_risk), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
                     Text(nearestInfo, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                 }
             }

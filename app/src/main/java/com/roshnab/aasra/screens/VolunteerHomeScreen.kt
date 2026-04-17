@@ -49,6 +49,8 @@ import kotlinx.coroutines.tasks.await
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.util.regex.Pattern
 import kotlin.math.*
+import com.roshnab.aasra.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun VolunteerHomeScreen(
@@ -68,6 +70,9 @@ fun VolunteerHomeScreen(
     var riverPolygons by remember { mutableStateOf<List<List<GeoPoint>>>(emptyList()) }
     var riverBarrages by remember { mutableStateOf<List<Barrage>>(emptyList()) }
     var riverBasin by remember { mutableStateOf<List<GeoPoint>>(emptyList()) }
+
+    // Shared ProfileViewModel for TopBar photo display
+    val profileViewModel: ProfileViewModel = viewModel()
 
     var selectedBarrage by remember { mutableStateOf<Barrage?>(null) }
 
@@ -103,7 +108,13 @@ fun VolunteerHomeScreen(
             when (currentScreen) {
                 BottomNavScreen.Home -> {
                     Scaffold(
-                        topBar = { AasraTopBar(onProfileClick = { currentScreen = BottomNavScreen.Profile }, onNotificationClick = {}) }
+                        topBar = {
+                            AasraTopBar(
+                                onProfileClick = { currentScreen = BottomNavScreen.Profile },
+                                onNotificationClick = {},
+                                photoUrl = profileViewModel.uiState.photoUrl
+                            )
+                        }
                     ) { padding ->
                         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
                             AndroidView(
@@ -263,7 +274,7 @@ fun VolunteerHomeScreen(
                             Box(Modifier.align(Alignment.TopStart).padding(16.dp)) {
                                 AssistChip(
                                     onClick = {},
-                                    label = { Text("Volunteer Active") },
+                                    label = { Text(stringResource(R.string.volunteer_active)) },
                                     leadingIcon = { Icon(Icons.Default.Warning, null) },
                                     colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                                 )
@@ -288,7 +299,6 @@ fun VolunteerHomeScreen(
                 }
                 BottomNavScreen.Profile -> {
                     Box(modifier = Modifier.padding(bottom = 100.dp)) {
-                        val profileViewModel: ProfileViewModel = viewModel()
                         ProfileScreen(
                             onBackClick = { currentScreen = BottomNavScreen.Home },
                             onLogoutClick = onLogoutClick,
@@ -399,7 +409,7 @@ fun FirebaseReportDialog(report: Report, myLocation: GeoPoint?, onDismiss: () ->
 
                 Spacer(Modifier.height(12.dp))
 
-                Text("Situation:", style = MaterialTheme.typography.labelLarge, color = Color.Gray)
+                Text(stringResource(R.string.situation), style = MaterialTheme.typography.labelLarge, color = Color.Gray)
                 Text(finalDescription, style = MaterialTheme.typography.bodyLarge)
 
                 Spacer(Modifier.height(24.dp))
@@ -421,7 +431,7 @@ fun FirebaseReportDialog(report: Report, myLocation: GeoPoint?, onDismiss: () ->
                     ) {
                         Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Mark as Solved", fontSize = 16.sp)
+                        Text(stringResource(R.string.mark_as_solved), fontSize = 16.sp)
                     }
                 } else {
                     Button(
@@ -444,7 +454,7 @@ fun FirebaseReportDialog(report: Report, myLocation: GeoPoint?, onDismiss: () ->
                     ) {
                         Icon(Icons.Default.Navigation, null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Accept & Navigate", fontSize = 16.sp)
+                        Text(stringResource(R.string.accept_navigate), fontSize = 16.sp)
                     }
                 }
             }

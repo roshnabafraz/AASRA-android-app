@@ -28,38 +28,44 @@ class NotificationViewModel : ViewModel() {
         val currentUser = auth.currentUser ?: return
         val currentUserId = currentUser.uid
 
-        // In Firestore, you can query by "in" array to get personal + broadcast notifications
-        notificationsCollection
-            .whereIn("targetUserId", listOf(currentUserId, "all_volunteers"))
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(50)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    Log.e("NotificationViewModel", "Error fetching notifications", error)
-                    return@addSnapshotListener
-                }
+        db.collection("users").document(currentUserId).get().addOnCompleteListener { task ->
+            val role = if (task.isSuccessful) task.result?.getString("role") ?: "victim" else "victim"
+            val targetList = mutableListOf(currentUserId, "all")
+            if (role == "volunteer") targetList.add("all_volunteers")
+            if (role == "victim") targetList.add("all_victims")
 
-                if (snapshot != null) {
-                    val notifList = snapshot.toObjects(AppNotification::class.java)
-                    
-                    val oneHourAgo = System.currentTimeMillis() - 3600_000L
-                    val recentNotifs = notifList.filter { 
-                        it.timestamp == null || it.timestamp!!.time > oneHourAgo
+            notificationsCollection
+                .whereIn("targetUserId", targetList)
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(50)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e("NotificationViewModel", "Error fetching notifications", error)
+                        return@addSnapshotListener
                     }
-                    
-                    // Fire local push for newly added notifications
-                    val oldIds = _notifications.value.map { it.notificationId }.toSet()
-                    val newNotifs = recentNotifs.filter { !oldIds.contains(it.notificationId) && !it.isRead }
-                    
-                    if (oldIds.isNotEmpty()) {
-                        for (n in newNotifs) {
-                            LocalPushHelper.showNotification(n.title, n.message)
+
+                    if (snapshot != null) {
+                        val notifList = snapshot.toObjects(AppNotification::class.java)
+
+                        val oneHourAgo = System.currentTimeMillis() - 3600_000L
+                        val recentNotifs = notifList.filter {
+                            it.timestamp == null || it.timestamp!!.time > oneHourAgo
                         }
+
+                        // Fire local push for newly added notifications
+                        val oldIds = _notifications.value.map { it.notificationId }.toSet()
+                        val newNotifs = recentNotifs.filter { !oldIds.contains(it.notificationId) && !it.isRead }
+
+                        if (oldIds.isNotEmpty()) {
+                            for (n in newNotifs) {
+                                LocalPushHelper.showNotification(n.title, n.message)
+                            }
+                        }
+
+                        _notifications.value = recentNotifs
                     }
-                    
-                    _notifications.value = recentNotifs
                 }
-            }
+        }
 
         // Periodic cleanup task to remove expired notifications dynamically while app is open
         viewModelScope.launch {

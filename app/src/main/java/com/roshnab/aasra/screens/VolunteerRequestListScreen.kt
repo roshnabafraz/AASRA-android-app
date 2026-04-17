@@ -36,6 +36,8 @@ import java.util.Date
 import java.util.regex.Pattern
 import kotlin.math.*
 import kotlinx.coroutines.launch
+import com.roshnab.aasra.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,19 +76,13 @@ fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
                 TopAppBar(
                     title = {
                         Column {
-                            Text("Requests", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.requests), fontWeight = FontWeight.Bold)
                             if (volunteerLocation != null && selectedTabIndex == 0) {
-                                Text(
-                                    "Sorted by nearest location",
+                                Text(stringResource(R.string.sorted_by_nearest_location),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { /* Refresh logic */ }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -98,12 +94,12 @@ fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
                     Tab(
                         selected = selectedTabIndex == 0,
                         onClick = { selectedTabIndex = 0 },
-                        text = { Text("New Urgents", fontWeight = FontWeight.Bold) }
+                        text = { Text(stringResource(R.string.new_urgents), fontWeight = FontWeight.Bold) }
                     )
                     Tab(
                         selected = selectedTabIndex == 1,
                         onClick = { selectedTabIndex = 1 },
-                        text = { Text("Accepted", fontWeight = FontWeight.Bold) }
+                        text = { Text(stringResource(R.string.accepted), fontWeight = FontWeight.Bold) }
                     )
                 }
             }
@@ -136,7 +132,7 @@ fun VolunteerRequestListScreen(volunteerLocation: GeoPoint?) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(64.dp), tint = Color.Green)
                         Spacer(Modifier.height(16.dp))
-                        Text("No active SOS requests!", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.no_active_sos_requests), style = MaterialTheme.typography.titleMedium)
                     }
                 }
             } else {
@@ -303,7 +299,7 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?, isAccepted: Boo
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
-                        Text("Accept & Navigate")
+                        Text(stringResource(R.string.accept_navigate))
                         Spacer(Modifier.width(8.dp))
                         Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(16.dp))
                     }
@@ -318,7 +314,7 @@ fun ReportItemCard(report: Report, volunteerLocation: GeoPoint?, isAccepted: Boo
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                     ) {
-                        Text("Mark as Solved")
+                        Text(stringResource(R.string.mark_as_solved))
                         Spacer(Modifier.width(8.dp))
                         Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
                     }
@@ -364,14 +360,12 @@ fun LocationWarningCard() {
             Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.onErrorContainer)
             Spacer(Modifier.width(12.dp))
             Column {
-                Text(
-                    "Location Unavailable",
+                Text(stringResource(R.string.location_unavailable),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
-                Text(
-                    "Distances cannot be calculated. Please check map.",
+                Text(stringResource(R.string.distances_cannot_be_calculated_please_check_map),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )

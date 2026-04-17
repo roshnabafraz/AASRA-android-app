@@ -10,7 +10,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Favorite
@@ -32,6 +34,8 @@ import androidx.compose.ui.window.Dialog
 import com.roshnab.aasra.data.Donation
 import com.roshnab.aasra.data.DonationRepository
 import kotlinx.coroutines.launch
+import com.roshnab.aasra.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +57,7 @@ fun DonationScreen(onBackClick: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Community Heroes", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.community_heroes), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -68,7 +72,7 @@ fun DonationScreen(onBackClick: () -> Unit) {
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
                 icon = { Icon(Icons.Filled.Favorite, null) },
-                text = { Text("Donate Now", fontWeight = FontWeight.Bold) }
+                text = { Text(stringResource(R.string.donate_now), fontWeight = FontWeight.Bold) }
             )
         }
     ) { padding ->
@@ -109,14 +113,14 @@ fun TotalDonationBanner(total: Int) {
             modifier = Modifier.padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Total Funds Raised", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.total_funds_raised), style = MaterialTheme.typography.labelLarge)
             Text(
                 text = "PKR $total",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.primary
             )
-            Text("Together we are AASRA.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text(stringResource(R.string.together_we_are_aasra), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         }
     }
 }
@@ -124,73 +128,74 @@ fun TotalDonationBanner(total: Int) {
 @Composable
 fun DonorCard(donation: Donation) {
     Card(
-        elevation = CardDefaults.cardElevation(2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth()
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth()
         ) {
-            // 1. LEFT SIDE: Icon
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(donation.tier.color.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(donation.tier.icon, fontSize = 20.sp)
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // 2. MIDDLE: Name & Details (Takes remaining space)
-            Column(
-                modifier = Modifier.weight(1f) // This ensures the name doesn't push the amount off screen
-            ) {
+                // Name
                 Text(
                     text = donation.displayName,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,               // Prevent wrapping
-                    overflow = TextOverflow.Ellipsis // Add "..." if too long
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Tier Badge + Date Row
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        color = donation.tier.color.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(4.dp),
-                    ) {
-                        Text(
-                            text = donation.tier.title,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black.copy(alpha = 0.7f)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(donation.date, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                // Amount
+                Text(
+                    text = "Rs. ${donation.amount}",
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1
+                )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // 3. RIGHT SIDE: Amount (Fixed width behavior)
-            Text(
-                text = "Rs. ${donation.amount}",
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1 // Never wrap amount
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Tier Badge
+                Surface(
+                    color = donation.tier.color.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(
+                        text = donation.tier.title.uppercase(),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 0.5.sp,
+                        color = donation.tier.color
+                    )
+                }
+
+                // Date
+                Text(
+                    text = donation.date,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -212,7 +217,7 @@ fun BankDetailsDialog(onDismiss: () -> Unit) {
             ) {
                 Icon(Icons.Filled.Favorite, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Donate via Bank Transfer", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.donate_via_bank_transfer), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Column(
@@ -239,12 +244,12 @@ fun BankDetailsDialog(onDismiss: () -> Unit) {
                     ) {
                         Icon(Icons.Filled.ContentCopy, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Copy Account No", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.copy_account_no), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
-                Text("After payment, please share the screenshot via WhatsApp to update your name on the list.", textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontSize = 12.sp, color = Color.Gray)
+                Text(stringResource(R.string.after_payment_please_share_the_screenshot_via_whatsapp_to_update_your_name_on_the_list), textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontSize = 12.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
@@ -258,7 +263,7 @@ fun BankDetailsDialog(onDismiss: () -> Unit) {
                 ) {
                     Icon(Icons.Filled.Share, null, tint = Color.White)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Share Proof on WhatsApp", color = Color.White)
+                    Text(stringResource(R.string.share_proof_on_whatsapp), color = Color.White)
                 }
             }
         }

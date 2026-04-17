@@ -54,6 +54,8 @@ import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import com.roshnab.aasra.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun HomeScreen(
@@ -71,6 +73,9 @@ fun HomeScreen(
 
     val auth = remember { FirebaseAuth.getInstance() }
     val currentUserId = auth.currentUser?.uid
+
+    // Shared ProfileViewModel so TopBar can show photo even on HomeScreen
+    val profileViewModel: ProfileViewModel = viewModel()
 
     // Active Reports
     val myActiveReport by ReportRepository.getMyActiveReportFlow(currentUserId ?: "").collectAsState(initial = null)
@@ -224,7 +229,11 @@ fun HomeScreen(
                     }
 
                     Box(Modifier.align(Alignment.TopCenter)) {
-                        AasraTopBar(onProfileClick = { currentScreen = BottomNavScreen.Profile }, onNotificationClick = { })
+                        AasraTopBar(
+                            onProfileClick = { currentScreen = BottomNavScreen.Profile },
+                            onNotificationClick = { },
+                            photoUrl = profileViewModel.uiState.photoUrl
+                        )
                     }
 
                     SmallFloatingActionButton(
@@ -260,7 +269,7 @@ fun HomeScreen(
                     ) {
                         Icon(Icons.Filled.Warning, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Report", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.report), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                     if (myActiveReport != null) {
                         Card(
@@ -275,8 +284,8 @@ fun HomeScreen(
                                 Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.onErrorContainer)
                                 Spacer(Modifier.width(12.dp))
                                 Column {
-                                    Text("SOS Request Active", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
-                                    Text("Tap to view details or cancel", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                                    Text(stringResource(R.string.sos_request_active), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
+                                    Text(stringResource(R.string.tap_to_view_details_or_cancel), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
                                 }
                             }
                         }
@@ -476,7 +485,7 @@ fun VictimRequestDialog(report: Report, onDismiss: () -> Unit) {
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4CAF50))
                         ) {
                             Column(Modifier.padding(16.dp)) {
-                                Text("HELP IS ON ITS WAY!", color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(R.string.help_is_on_its_way), color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                                 Spacer(Modifier.height(4.dp))
                                 Text("Volunteer: ${report.volunteerName}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                                 Text("Phone: ${report.volunteerPhone}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
@@ -485,8 +494,7 @@ fun VictimRequestDialog(report: Report, onDismiss: () -> Unit) {
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Active SOS Request",
+                        Text(text = stringResource(R.string.active_sos_request),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.error
@@ -512,17 +520,16 @@ fun VictimRequestDialog(report: Report, onDismiss: () -> Unit) {
                     ) {
                         Icon(Icons.Default.Close, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Cancel Request", fontSize = 16.sp)
+                        Text(stringResource(R.string.cancel_request), fontSize = 16.sp)
                     }
                 } else {
-                    Text(
-                        text = "Cancel Request",
+                    Text(text = stringResource(R.string.cancel_request),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.error
                     )
                     Spacer(Modifier.height(16.dp))
-                    Text("Please specify the reason for cancellation:")
+                    Text(stringResource(R.string.please_specify_the_reason_for_cancellation))
                     
                     Spacer(Modifier.height(8.dp))
                     
@@ -541,7 +548,7 @@ fun VictimRequestDialog(report: Report, onDismiss: () -> Unit) {
                     Spacer(Modifier.height(24.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = { showCancelConfirm = false }) {
-                            Text("Back")
+                            Text(stringResource(R.string.back))
                         }
                         Spacer(Modifier.width(8.dp))
                         Button(
@@ -553,7 +560,7 @@ fun VictimRequestDialog(report: Report, onDismiss: () -> Unit) {
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                         ) {
-                            Text("Confirm Cancel")
+                            Text(stringResource(R.string.confirm_cancel))
                         }
                     }
                 }

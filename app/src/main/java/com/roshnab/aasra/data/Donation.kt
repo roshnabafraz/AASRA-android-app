@@ -33,9 +33,9 @@ data class Donation(
         }
 }
 
-enum class DonationTier(val title: String, val color: Color, val icon: String) {
-    PLATINUM("Savior", Color(0xFFE5E4E2), "👑"),
-    GOLD("Guardian", Color(0xFFFFD700), "⭐"),
-    SILVER("Defender", Color(0xFFC0C0C0), "🛡️"),
-    BRONZE("Supporter", Color(0xFFCD7F32), "❤️")
+enum class DonationTier(val title: String, val color: Color) {
+    PLATINUM("Savior", Color(0xFF1ABC9C)), 
+    GOLD("Guardian", Color(0xFFFFB300)),
+    SILVER("Defender", Color(0xFF9E9E9E)),
+    BRONZE("Supporter", Color(0xFFCD7F32))
 }

@@ -22,6 +22,8 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import com.roshnab.aasra.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun LocationPickerScreen(
@@ -86,13 +88,13 @@ fun LocationPickerScreen(
             Button(onClick = onBackClick, colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)) {
                 Icon(Icons.Filled.Close, null)
                 Spacer(Modifier.width(8.dp))
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
 
             Button(onClick = { showDialog = true }) {
                 Icon(Icons.Filled.Check, null)
                 Spacer(Modifier.width(8.dp))
-                Text("Confirm Location")
+                Text(stringResource(R.string.confirm_location))
             }
         }
     }
@@ -101,12 +103,12 @@ fun LocationPickerScreen(
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Name this Location") },
+            title = { Text(stringResource(R.string.name_this_location)) },
             text = {
                 OutlinedTextField(
                     value = locationName,
                     onValueChange = { locationName = it },
-                    label = { Text("e.g. Home, Office") },
+                    label = { Text(stringResource(R.string.e_g_home_office)) },
                     singleLine = true
                 )
             },
@@ -120,10 +122,10 @@ fun LocationPickerScreen(
                             Toast.makeText(context, "Please enter a name", Toast.LENGTH_SHORT).show()
                         }
                     }
-                ) { Text("Save") }
+                ) { Text(stringResource(R.string.save)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

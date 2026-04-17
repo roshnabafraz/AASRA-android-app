@@ -26,6 +26,8 @@ import com.roshnab.aasra.data.NotificationViewModel
 import com.roshnab.aasra.components.ShimmerCardItem
 import kotlinx.coroutines.delay
 import java.util.Date
+import com.roshnab.aasra.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +46,7 @@ fun NotificationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Notifications", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.notifications), fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     scrolledContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
@@ -77,8 +79,7 @@ fun NotificationScreen(
                             tint = Color.Gray
                         )
                         Spacer(Modifier.height(16.dp))
-                        Text(
-                            "No new notifications",
+                        Text(stringResource(R.string.no_new_notifications),
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.Gray
                         )

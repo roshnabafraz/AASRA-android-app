@@ -7,16 +7,48 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.net.HttpURLConnection
+import java.net.URL
 
 object ReportRepository {
     private val db = FirebaseFirestore.getInstance()
     private val reportsCollection = db.collection("reports")
+
+    private fun triggerAiEngineNative(reportId: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            var connection: HttpURLConnection? = null
+            try {
+                val url = URL("https://aasra-ai-engine.onrender.com/process_report/$reportId")
+                connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("Accept", "application/json")
+                
+                val responseCode = connection.responseCode
+                if (responseCode in 200..299) {
+                    Log.d("AI_ENGINE", "AI Engine triggered successfully. Code: $responseCode")
+                } else {
+                    Log.e("AI_ENGINE", "AI Engine failed. Code: $responseCode")
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e("AI_ENGINE", "Network error: ${e.message}")
+            } finally {
+                connection?.disconnect()
+            }
+        }
+    }
 
     suspend fun submitReport(report: Report): Boolean {
         return try {
             val docRef = reportsCollection.document()
             val finalReport = report.copy(reportId = docRef.id)
             docRef.set(finalReport).await()
+            
+            // Trigger AI Engine
+            triggerAiEngineNative(docRef.id)
             
             // Trigger Notification to Volunteers
             NotificationService.broadcastToVolunteers(

@@ -12,17 +12,26 @@ import androidx.compose.material.icons.filled.WaterDrop // Using a drop icon as 
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.roshnab.aasra.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun AasraTopBar(
     onProfileClick: () -> Unit = {},
-    onNotificationClick: () -> Unit = {}
+    onNotificationClick: () -> Unit = {},
+    photoUrl: String? = null
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -50,8 +59,7 @@ fun AasraTopBar(
 //                Spacer(modifier = Modifier.width(8.dp))
 
                 // APP NAME
-                Text(
-                    text = "AASRA",
+                Text(text = stringResource(R.string.aasra),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -74,12 +82,30 @@ fun AasraTopBar(
                         .clickable { onProfileClick() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Person,
-                        contentDescription = "Profile",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    val bitmap = remember(photoUrl) {
+                        if (!photoUrl.isNullOrEmpty() && photoUrl.startsWith("data:image")) {
+                            try {
+                                val base64Data = photoUrl.substringAfter(",")
+                                val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+                                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                            } catch (e: Exception) { null }
+                        } else null
+                    }
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = "Profile",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }

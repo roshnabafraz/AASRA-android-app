@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.roshnab.aasra.R
 import kotlinx.coroutines.delay
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun SplashScreen(onSplashFinished: () -> Unit) {
@@ -66,8 +67,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = "AASRA",
+            Text(text = stringResource(R.string.aasra),
                 fontSize = 32.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.primary,
@@ -76,8 +76,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = "Har Mushkil Mein, Aap Ka AASRA",
+            Text(text = stringResource(R.string.har_mushkil_mein_aap_ka_aasra),
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 2.sp
@@ -89,8 +88,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 32.dp)
         ) {
-            Text(
-                text = "Powered by Compassion",
+            Text(text = stringResource(R.string.powered_by_compassion),
                 fontSize = 12.sp,
                 color = Color.Gray
             )

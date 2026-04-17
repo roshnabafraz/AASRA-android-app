@@ -1,7 +1,10 @@
 package com.roshnab.aasra.data
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Base64
 import android.provider.ContactsContract
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,7 +26,8 @@ data class ProfileUiState(
     val totalDonated: Int = 0,
     val emergencyContacts: List<EmergencyContact> = emptyList(),
     val safeLocations: List<SafeLocation> = emptyList(),
-    val areNotificationsEnabled: Boolean = true
+    val areNotificationsEnabled: Boolean = true,
+    val photoUrl: String = ""
 )
 
 data class EmergencyContact(
@@ -57,6 +61,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             if (user != null) {
                 var name = user.displayName ?: "AASRA User"
                 val email = user.email ?: ""
+                var photoUrl = ""
                 var role = "victim" // Default
                 var contacts = emptyList<EmergencyContact>()
                 var locations = emptyList<SafeLocation>()
@@ -87,6 +92,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                         } ?: emptyList()
 
                         notifPref = snapshot.getBoolean("notificationsEnabled") ?: true
+
+                        val fsPhotoUrl = snapshot.getString("photoUrl")
+                        if (!fsPhotoUrl.isNullOrBlank()) photoUrl = fsPhotoUrl
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -105,7 +113,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     totalDonated = userTotal,
                     emergencyContacts = contacts,
                     safeLocations = locations,
-                    areNotificationsEnabled = notifPref
+                    areNotificationsEnabled = notifPref,
+                    photoUrl = photoUrl
                 )
             } else {
                 uiState = uiState.copy(isLoading = false)
@@ -235,5 +244,33 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             .update("notificationsEnabled", isEnabled)
             .addOnFailureListener {
             }
+    }
+
+    fun uploadProfileImage(imageBytes: ByteArray, onResult: (Boolean, String?) -> Unit) {
+        val user = auth.currentUser ?: return onResult(false, "User not authenticated")
+
+        viewModelScope.launch {
+            try {
+                // Decode and resize to max 256x256 to keep Firestore document small
+                val original = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                val scaled = Bitmap.createScaledBitmap(original, 256, 256, true)
+
+                val compressed = java.io.ByteArrayOutputStream()
+                scaled.compress(Bitmap.CompressFormat.JPEG, 70, compressed)
+                val base64String = Base64.encodeToString(compressed.toByteArray(), Base64.DEFAULT)
+                val dataUri = "data:image/jpeg;base64,$base64String"
+
+                // Save to Firestore
+                db.collection("users").document(user.uid)
+                    .set(mapOf("photoUrl" to dataUri), SetOptions.merge())
+                    .await()
+
+                uiState = uiState.copy(photoUrl = dataUri)
+                onResult(true, "Profile Picture Updated!")
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false, "Error: ${e.message}")
+            }
+        }
     }
 }

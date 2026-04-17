@@ -3,6 +3,7 @@ package com.roshnab.aasra.screens
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.app.Activity
 import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.Toast
@@ -37,6 +38,13 @@ import com.roshnab.aasra.data.EmergencyContact
 import com.roshnab.aasra.data.ProfileViewModel
 import com.roshnab.aasra.data.SafeLocation
 import com.roshnab.aasra.data.SettingsStore
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.asImageBitmap
+import com.roshnab.aasra.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,7 +95,7 @@ fun ProfileScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("Profile & Settings", fontWeight = FontWeight.Bold) },
+                    title = { Text(stringResource(R.string.profile_settings), fontWeight = FontWeight.Bold) },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
                             Icon(Icons.Filled.ArrowBack, "Back")
@@ -116,7 +124,8 @@ fun ProfileScreen(
             ProfileHeaderSection(
                 name = if (state.name.isEmpty()) "Loading..." else state.name,
                 email = if (state.email.isEmpty()) "..." else state.email,
-                totalDonated = state.totalDonated
+                totalDonated = state.totalDonated,
+                photoUrl = state.photoUrl
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -171,14 +180,14 @@ fun ProfileScreen(
                 ) {
                     SectionTitle("Safe Locations")
                     TextButton(onClick = onAddLocationClick) {
-                        Text("+ Add New", color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.add_new), color = MaterialTheme.colorScheme.primary)
                     }
                 }
 
                 if (state.isLoading) {
                     ShimmerCardItem()
                 } else if (state.safeLocations.isEmpty()) {
-                    Text("No locations saved yet.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 16.dp))
+                    Text(stringResource(R.string.no_locations_saved_yet), fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 16.dp))
                 } else {
                     state.safeLocations.forEach { loc ->
                         SettingsItem(
@@ -213,10 +222,14 @@ fun ProfileScreen(
                     onThemeChanged(isChecked) // <--- TRIGGERS MAIN ACTIVITY
                 }
 
-                SettingsItem(Icons.Filled.Language, "Language", currentLanguage) {
+                SettingsItem(Icons.Filled.Language, stringResource(R.string.language), currentLanguage) {
                     val newLang = if (currentLanguage == "English") "Urdu" else "English"
                     currentLanguage = newLang
                     SettingsStore.language = newLang
+                    val intent = Intent(context, com.roshnab.aasra.MainActivity::class.java)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    context.startActivity(intent)
+                    (context as? Activity)?.finish()
                 }
             }
 
@@ -238,7 +251,7 @@ fun ProfileScreen(
             }
 
             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
-                Text("AASRA v1.0.0", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.aasra_v1_0_0), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -248,7 +261,7 @@ fun ProfileScreen(
     if (contactToDelete != null) {
         AlertDialog(
             onDismissRequest = { contactToDelete = null },
-            title = { Text("Remove Contact?") },
+            title = { Text(stringResource(R.string.remove_contact)) },
             text = { Text("Are you sure you want to remove ${contactToDelete?.name} from your emergency contacts?") },
             confirmButton = {
                 TextButton(
@@ -257,10 +270,10 @@ fun ProfileScreen(
                         contactToDelete = null
                         Toast.makeText(context, "Contact Removed", Toast.LENGTH_SHORT).show()
                     }
-                ) { Text("Remove", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { contactToDelete = null }) { Text("Cancel") }
+                TextButton(onClick = { contactToDelete = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -268,7 +281,7 @@ fun ProfileScreen(
     if (locationToDelete != null) {
         AlertDialog(
             onDismissRequest = { locationToDelete = null },
-            title = { Text("Delete Location?") },
+            title = { Text(stringResource(R.string.delete_location)) },
             text = { Text("Are you sure you want to delete '${locationToDelete?.name}' from your safe locations?") },
             confirmButton = {
                 TextButton(
@@ -277,10 +290,10 @@ fun ProfileScreen(
                         locationToDelete = null
                         Toast.makeText(context, "Location Deleted", Toast.LENGTH_SHORT).show()
                     }
-                ) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { locationToDelete = null }) { Text("Cancel") }
+                TextButton(onClick = { locationToDelete = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -289,7 +302,7 @@ fun ProfileScreen(
 // --- HELPER FUNCTIONS ---
 
 @Composable
-fun ProfileHeaderSection(name: String, email: String, totalDonated: Int) {
+fun ProfileHeaderSection(name: String, email: String, totalDonated: Int, photoUrl: String = "") {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
         shape = RoundedCornerShape(16.dp),
@@ -307,7 +320,25 @@ fun ProfileHeaderSection(name: String, email: String, totalDonated: Int) {
                     .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.Person, null, modifier = Modifier.size(50.dp), tint = MaterialTheme.colorScheme.primary)
+                val bitmap = remember(photoUrl) {
+                    if (photoUrl.isNotEmpty() && photoUrl.startsWith("data:image")) {
+                        try {
+                            val base64Data = photoUrl.substringAfter(",")
+                            val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+                            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        } catch (e: Exception) { null }
+                    } else null
+                }
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                } else {
+                    Icon(Icons.Filled.Person, null, modifier = Modifier.size(50.dp), tint = MaterialTheme.colorScheme.primary)
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -390,7 +421,7 @@ fun LogoutItem(onClick: () -> Unit) {
     ) {
         Icon(Icons.Filled.Logout, null, tint = MaterialTheme.colorScheme.error)
         Spacer(modifier = Modifier.width(16.dp))
-        Text("Log Out", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error)
+        Text(stringResource(R.string.log_out), fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error)
     }
 }
 

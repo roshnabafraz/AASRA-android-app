@@ -46,6 +46,7 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.roshnab.aasra.R
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -122,8 +123,7 @@ fun AuthScreen(
                     .clip(RoundedCornerShape(24.dp))
             )
 
-            Text(
-                text = "AASRA",
+            Text(text = stringResource(R.string.aasra),
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.ExtraBold
@@ -167,8 +167,7 @@ fun LoginContent(
     val context = LocalContext.current
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = "Welcome Back",
+        Text(text = stringResource(R.string.welcome_back),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 24.dp)
@@ -214,9 +213,8 @@ fun LoginContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         Row {
-            Text("Don't have an account? ", color = MaterialTheme.colorScheme.onSurface)
-            Text(
-                text = "Sign Up",
+            Text(stringResource(R.string.don_t_have_an_account), color = MaterialTheme.colorScheme.onSurface)
+            Text(text = stringResource(R.string.sign_up),
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable { onToggleMode() }
@@ -245,8 +243,7 @@ fun SignUpContent(
     val context = LocalContext.current
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = "Create Account",
+        Text(text = stringResource(R.string.create_account),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 24.dp)
@@ -344,9 +341,8 @@ fun SignUpContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         Row {
-            Text("Already have an account? ", color = MaterialTheme.colorScheme.onSurface)
-            Text(
-                text = "Log In",
+            Text(stringResource(R.string.already_have_an_account), color = MaterialTheme.colorScheme.onSurface)
+            Text(text = stringResource(R.string.log_in),
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable { onToggleMode() }
@@ -436,6 +432,6 @@ fun GoogleButton(onClick: () -> Unit) {
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text("Continue with Google", color = MaterialTheme.colorScheme.onBackground)
+        Text(stringResource(R.string.continue_with_google), color = MaterialTheme.colorScheme.onBackground)
     }
 }
